@@ -103,7 +103,7 @@ export default function TeamViewerPage() {
     });
 
     return () => unsub && unsub();
-  }, [teamId]);
+  }, [teamId, router]); // ← добавили router сюда
 
   if (loading) {
     return <div className="p-6">Loading...</div>;
