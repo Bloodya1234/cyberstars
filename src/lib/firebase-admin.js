@@ -1,27 +1,30 @@
-import { cert, getApps, initializeApp } from 'firebase-admin/app';
+// src/lib/firebase-admin.js
+import { getApps, initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// Decode the base64-encoded private key
-const firebasePrivateKeyBase64 = process.env.FIREBASE_PRIVATE_KEY_BASE64;
+// Единое чтение ключа из base64
+function getServiceAccountFromEnv() {
+  const b64 = process.env.FIREBASE_PRIVATE_KEY_BASE64;
+  if (!b64) {
+    throw new Error(
+      'FIREBASE_PRIVATE_KEY_BASE64 is missing. Set it in Vercel Project → Settings → Environment Variables.'
+    );
+  }
+  const json = JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
 
-if (!firebasePrivateKeyBase64) {
-  throw new Error('FIREBASE_PRIVATE_KEY_BASE64 is not set in the environment');
+  // Страхуемся: если какие-то поля не пришли в JSON — добираем из обычных env
+  return {
+    projectId: json.project_id || process.env.FIREBASE_PROJECT_ID,
+    clientEmail: json.client_email || process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: json.private_key,
+  };
 }
-
-const firebasePrivateKey = Buffer.from(firebasePrivateKeyBase64, 'base64').toString('utf8');
 
 if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: firebasePrivateKey,
-    }),
-  });
+  const serviceAccount = getServiceAccountFromEnv();
+  initializeApp({ credential: cert(serviceAccount) });
 }
 
-const adminAuth = getAuth();
-const db = getFirestore();
-
-export { adminAuth, db };
+export const adminAuth = () => getAuth();
+export const db = getFirestore();

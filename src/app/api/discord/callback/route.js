@@ -1,52 +1,38 @@
+// src/app/api/discord/callback/route.js
 import { NextResponse } from 'next/server';
-import { getApps, initializeApp, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { db } from '@/lib/firebase-admin'; // <-- единый модуль
 
-const serviceAccount = {
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-};
-
-if (!getApps().length) {
-  initializeApp({ credential: cert(serviceAccount) });
-}
-
-const db = getFirestore();
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function GET(req) {
   const url = new URL(req.url);
-  console.log('🔁 Discord callback URL:', url.toString());
+  const origin = url.origin;
 
   const code = url.searchParams.get('code');
   const stateEncoded = url.searchParams.get('state');
-
   if (!code || !stateEncoded) {
     return NextResponse.json({ error: 'Missing code or state' }, { status: 400 });
   }
 
   let steamId, token;
   try {
-    const stateObj = JSON.parse(atob(stateEncoded));
+    const stateObj = JSON.parse(Buffer.from(stateEncoded, 'base64').toString('utf8'));
     steamId = stateObj.steamId;
     token = stateObj.token;
-
-    if (!steamId || !token) {
-      throw new Error('Missing steamId or token in state');
-    }
+    if (!steamId || !token) throw new Error('Missing steamId or token in state');
   } catch (err) {
-    console.error('🔴 Invalid state:', err);
     return NextResponse.json({ error: 'Invalid state', message: err.message }, { status: 400 });
   }
 
   try {
-    // Exchange code for access token
+    // 1) Обмениваем code на access_token
     const params = new URLSearchParams({
       client_id: process.env.DISCORD_CLIENT_ID,
       client_secret: process.env.DISCORD_CLIENT_SECRET,
       grant_type: 'authorization_code',
       code,
-      redirect_uri: process.env.DISCORD_REDIRECT_URI,
+      redirect_uri: process.env.DISCORD_REDIRECT_URI || `${origin}/api/discord/callback`,
     });
 
     const discordRes = await fetch('https://discord.com/api/oauth2/token', {
@@ -54,66 +40,59 @@ export async function GET(req) {
       body: params,
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     });
-
     const discordData = await discordRes.json();
-    console.log('🔍 Discord Token Response:', discordData);
-
     if (!discordRes.ok || !discordData.access_token) {
       return NextResponse.json({ error: 'Token exchange failed', details: discordData }, { status: 500 });
     }
 
-    const accessToken = discordData.access_token;
-
-    // Fetch Discord user
+    // 2) Получаем /users/@me
     const userRes = await fetch('https://discord.com/api/users/@me', {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: { Authorization: `Bearer ${discordData.access_token}` },
     });
-
     const discordUser = await userRes.json();
-    console.log('👤 Discord User:', discordUser);
-
     if (!discordUser.id || !discordUser.username) {
       return NextResponse.json({ error: 'Invalid Discord user response', details: discordUser }, { status: 500 });
     }
 
-    const discordTag = `${discordUser.username}#${discordUser.discriminator}`;
+    const discordTag =
+      discordUser.discriminator && discordUser.discriminator !== '0'
+        ? `${discordUser.username}#${discordUser.discriminator}`
+        : discordUser.username; // для новых дискордов без discriminator
     const docId = steamId.startsWith('steam:') ? steamId : `steam:${steamId}`;
 
-    // Save Discord info to Firestore
-    await db.collection('users').doc(docId).set({
-      discord: {
-        id: discordUser.id,
-        tag: discordTag,
-        avatar: discordUser.avatar,
+    // 3) Сохраняем в Firestore
+    await db.collection('users').doc(docId).set(
+      {
+        discord: {
+          id: discordUser.id,
+          tag: discordTag,
+          avatar: discordUser.avatar,
+        },
+        joinedDiscordServer: false,
       },
-      joinedDiscordServer: false,
-    }, { merge: true });
+      { merge: true }
+    );
 
-    // ✅ Trigger bot to auto-invite user to Discord server
+    // 4) Пингуем бот-сервер (не падаем, если нет соединения)
     try {
-      const botRes = await fetch(`${process.env.BOT_SERVER_URL}/auto-invite`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ discordId: discordUser.id }),
-      });
-
-      const inviteResult = await botRes.json();
-      console.log('🤖 Auto-invite response:', inviteResult);
-
-      if (!botRes.ok) {
-        console.warn('⚠️ Bot server responded with error:', inviteResult);
+      const botUrl = process.env.BOT_SERVER_URL;
+      if (botUrl) {
+        const botRes = await fetch(`${botUrl}/auto-invite`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ discordId: discordUser.id }),
+        });
+        // можно прочитать ответ, но не делаем фатальной ошибкой
+        await botRes.json().catch(() => {});
       }
-    } catch (inviteErr) {
-      console.error('❌ Failed to contact bot server for invite:', inviteErr);
-    }
+    } catch {}
 
-    return NextResponse.redirect('https://localhost:3000/profile');
+    // 5) Редиректим на профиль (или куда нужно)
+    return NextResponse.redirect(`${origin}/profile`);
   } catch (err) {
-    console.error('🚨 Discord OAuth error:', err);
-    return NextResponse.json({
-      error: 'Discord OAuth failed',
-      message: err.message,
-      stack: err.stack,
-    }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Discord OAuth failed', message: err.message },
+      { status: 500 }
+    );
   }
 }
