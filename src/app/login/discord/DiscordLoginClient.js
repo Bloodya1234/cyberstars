@@ -13,7 +13,7 @@ export default function DiscordLoginClient() {
       router.replace(`/login?error=${encodeURIComponent(error)}`);
       return;
     }
-    // Если нужно что-то сделать при заходе на страницу — добавь сюда.
+    // тут можно добавить нужную логику авторизации/редиректов
   }, [router, searchParams]);
 
   return (
