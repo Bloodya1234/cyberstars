@@ -112,7 +112,7 @@ export default function TeamViewerPage() {
   if (!team) {
     return (
       <div className="p-6 text-red-600">
-        Team not found or you don't have permission to view this team.
+        Team not found or you don&apos;t have permission to view this team.
       </div>
     );
   }

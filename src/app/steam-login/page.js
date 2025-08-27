@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { getAuth, signInWithCustomToken, signOut } from 'firebase/auth';
 import { doc, updateDoc, getFirestore } from 'firebase/firestore';
 import { auth, app } from '@/firebase';
+import Image from 'next/image';
 
 const db = getFirestore(app);
 
@@ -12,7 +13,7 @@ export default function SteamLoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState('Logging in with Steam...');
-  const [avatar, setAvatar] = useState(null);
+  const [avatar, setAvatar] = useState<string | null>(null);
 
   useEffect(() => {
     const token = searchParams.get('token');
@@ -78,12 +79,14 @@ export default function SteamLoginPage() {
     <div className="text-center p-6">
       <h2 className="text-xl font-semibold mb-2">{status}</h2>
       {avatar && (
-        <img
+        <Image
           src={avatar}
           alt="Steam Avatar"
           className="rounded-full mx-auto mb-4"
           width={100}
           height={100}
+          priority
+          unoptimized
         />
       )}
       <button
