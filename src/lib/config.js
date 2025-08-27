@@ -1,0 +1,1 @@
+export const DISCORD_ADMIN_WEBHOOK = process.env.DISCORD_ADMIN_WEBHOOK;
