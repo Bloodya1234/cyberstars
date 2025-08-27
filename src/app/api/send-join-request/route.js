@@ -1,99 +1,64 @@
 // src/app/api/send-join-request/route.js
-import { NextResponse } from 'next/server';
-import { getApps, initializeApp, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
 
-// Firebase Admin SDK service account config
-const serviceAccount = {
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-};
-
-// Initialize Firebase app if not already initialized
-if (!getApps().length) {
-  initializeApp({ credential: cert(serviceAccount) });
-}
-
-const db = getFirestore();
+// Гарантируем Node.js-рантайм и динамическое выполнение (а не статический пререндер)
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function POST(req) {
-  const { teamId, userId, userName } = await req.json();
-
-  console.log('[Join Request] Incoming data:', { teamId, userId, userName });
-
-  if (!teamId || !userId || !userName) {
-    return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
-  }
-
   try {
-    // Fetch team
-    const teamRef = db.collection('teams').doc(teamId);
-    const teamSnap = await teamRef.get();
-    if (!teamSnap.exists) {
-      return NextResponse.json({ error: 'Team not found' }, { status: 404 });
+    // Проверяем, что задан URL бота в переменных окружения
+    const botUrl = process.env.BOT_SERVER_URL;
+    if (!botUrl) {
+      return new Response(
+        JSON.stringify({ error: 'BOT_SERVER_URL is not configured on the server' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
-    const teamData = teamSnap.data();
-    const captainId = teamData.captainId;
-    if (!captainId) {
-      return NextResponse.json({ error: 'Captain not assigned to team' }, { status: 400 });
+    // Читаем тело запроса
+    const body = await req.json().catch(() => ({}));
+    const discordId = body.discordId || body.discord_id;
+    const text = body.message ?? body.messageText;
+
+    if (!discordId || !text) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: discordId and message' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Fetch captain user
-    const captainRef = db.collection('users').doc(captainId);
-    const captainSnap = await captainRef.get();
-    if (!captainSnap.exists) {
-      return NextResponse.json({ error: 'Captain user not found' }, { status: 404 });
-    }
-
-    const captainData = captainSnap.data();
-    const discordId = captainData.discord?.id;
-    if (!discordId) {
-      return NextResponse.json({ error: 'Captain does not have Discord connected' }, { status: 400 });
-    }
-
-    // Build the message
-    const profileUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/profile/${userId}`;
-    const message = `👋 User **${userName}** is requesting to join your team.\n\n🔗 [View player profile](${profileUrl})`;
-
-    // Send message to bot server
-    const botUrl = process.env.BOT_SERVER_URL || 'http://localhost:3001';
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-
-    const res = await fetch(`${botUrl}/send-dm`, {
+    // Проксируем в бот-сервис
+    const upstream = await fetch(`${botUrl}/send-dm`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ discordId, message }),
-      signal: controller.signal
+      // Нормализуем поле сообщения в "message"
+      body: JSON.stringify({ discordId, message: text }),
     });
 
-    clearTimeout(timeout);
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error('❌ Bot server responded with error:', errorText);
-      throw new Error('Bot message failed');
+    // Если бот не ответил 2xx — отдаём 502 с деталями
+    if (!upstream.ok) {
+      const errText = await upstream.text().catch(() => '');
+      return new Response(
+        JSON.stringify({
+          success: false,
+          upstreamStatus: upstream.status,
+          upstreamError: errText || 'Bot service error',
+        }),
+        { status: 502, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
-    console.log('✅ Join request message sent to captain');
-
-    // Add to Firestore joinRequests
-    await teamRef.update({
-      joinRequests: [
-        ...(teamData.joinRequests || []),
-        {
-          id: userId,
-          username: userName,
-          timestamp: new Date().toISOString(),
-        },
-      ],
+    // Успех
+    const data = await upstream.json().catch(() => ({}));
+    return new Response(JSON.stringify({ success: true, ...data }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
     });
-
-    return NextResponse.json({ success: true });
   } catch (err) {
-    console.error('❌ Join request error:', err);
-    return NextResponse.json({ error: 'Failed to notify captain' }, { status: 500 });
+    console.error('send-join-request error:', err);
+    return new Response(
+      JSON.stringify({ error: 'Internal Server Error', details: String(err?.message || err) }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 }
