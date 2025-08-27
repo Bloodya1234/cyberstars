@@ -29,7 +29,7 @@ export default function SteamLoginClient() {
 
     signInWithCustomToken(auth, token)
       .then(async (userCredential) => {
-        setStatus(\`✅ Logged in as \${name}\`);
+        setStatus(`✅ Logged in as ${name}`);
         if (avatarUrl) setAvatar(avatarUrl);
 
         const idToken = await userCredential.user.getIdToken();
@@ -45,7 +45,7 @@ export default function SteamLoginClient() {
 
         if (discord) {
           try {
-            const userRef = doc(db, 'users', \`steam:\${steamId}\`);
+            const userRef = doc(db, 'users', `steam:${steamId}`);
             await updateDoc(userRef, { discord });
           } catch (err) {
             console.error('Error saving Discord:', err);
