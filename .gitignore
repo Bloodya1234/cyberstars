@@ -46,3 +46,21 @@ next-env.d.ts
 *.key
 *.crt
 serviceAccountKey.json
+ cat >> .gitignore << 'EOF'
+# env
+.env
+.env.*
+# keys and certs
+*.pem
+*.key
+*.crt
+serviceAccountKey.json
+firebase-private-key.*
+localhost*
+# node
+node_modules
+.next
+dist
+# OS junk
+.DS_Store
+EOF
