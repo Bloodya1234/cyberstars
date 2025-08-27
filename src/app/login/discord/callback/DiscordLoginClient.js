@@ -8,13 +8,13 @@ export default function DiscordLoginClient() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // тут твоя логика обработки параметров, если нужна
-    // по умолчанию — ничего не делаем
     const error = searchParams.get('error');
     if (error) {
-      console.error('Discord login error:', error);
+      router.replace(`/login?error=${encodeURIComponent(error)}`);
+      return;
     }
-  }, [searchParams]);
+    // Если нужно что-то сделать при заходе на страницу — добавь сюда.
+  }, [router, searchParams]);
 
   return (
     <div className="p-6 text-center">
