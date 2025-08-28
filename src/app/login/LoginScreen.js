@@ -1,5 +1,6 @@
 'use client';
 
+// src/app/login/LoginScreen.js
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
@@ -8,7 +9,7 @@ import { app } from '@/firebase';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 
-export default function LoginScreen() {
+export default function LoginClient() {
   const searchParams = useSearchParams();
   const { t } = useTranslation('common');
   const [mounted, setMounted] = useState(false);
@@ -16,51 +17,57 @@ export default function LoginScreen() {
   useEffect(() => {
     setMounted(true);
 
-    // сохранить инвайт до логина
+    // сохраняем инвайт, обработаем после логина
     const inviteTeam = searchParams.get('inviteTeam');
     if (inviteTeam) sessionStorage.setItem('inviteTeam', inviteTeam);
 
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) return;
 
       const storedInviteTeam = sessionStorage.getItem('inviteTeam');
       if (storedInviteTeam) {
         try {
-          const userRef = doc(db, 'users', user.uid);
-          const snap = await getDoc(userRef);
+          const ref = doc(db, 'users', user.uid);
+          const snap = await getDoc(ref);
+
           if (snap.exists()) {
             const data = snap.data();
-            const incoming = data.invites?.incoming || [];
-            if (!incoming.includes(storedInviteTeam)) {
-              await updateDoc(userRef, { invites: { incoming: [...incoming, storedInviteTeam] } });
+            const current = data.invites?.incoming || [];
+            if (!current.includes(storedInviteTeam)) {
+              await updateDoc(ref, {
+                invites: { incoming: [...current, storedInviteTeam] },
+              });
             }
           }
         } catch (e) {
-          console.error('Failed to update invite info:', e);
+          console.error('❌ Failed to update invite info:', e);
         } finally {
           sessionStorage.removeItem('inviteTeam');
         }
       }
 
-      // после логина — на подключение Discord
+      // после логина — подключение Discord
       window.location.href = '/connect-discord';
     });
 
-    return () => unsubscribe();
+    return () => unsub();
   }, [searchParams]);
 
   const handleSteamLogin = () => {
     const inviteTeam = searchParams.get('inviteTeam') || '';
+
     const origin =
       typeof window !== 'undefined'
         ? window.location.origin
         : (process.env.NEXT_PUBLIC_BASE_URL || 'https://dota-platform-cyberstars.vercel.app');
 
+    // return_to и realm строим от текущего домена
     const returnToUrl = new URL('/api/steam/return', origin);
     if (inviteTeam) returnToUrl.searchParams.set('inviteTeam', inviteTeam);
+
     const realm = origin.endsWith('/') ? origin : `${origin}/`;
 
     const params = new URLSearchParams({
@@ -98,7 +105,33 @@ export default function LoginScreen() {
           <p className="text-lg text-gray-200 max-w-3xl">{t('intro_text')}</p>
         </div>
 
-        {/* … блоки с правилами и режимами … */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white/10 rounded-xl p-6 border border-white/10 shadow-inner hover:shadow-lg transition">
+            <h3 className="text-xl font-semibold mb-3 text-blue-300">{t('modes_title')}</h3>
+            <ul className="list-disc list-inside space-y-2 text-gray-200">
+              <li>{t('mode_1')}</li>
+              <li>{t('mode_2')}</li>
+              <li>{t('mode_3')}</li>
+              <li>{t('mode_4')}</li>
+            </ul>
+          </div>
+
+          <div className="bg-white/10 rounded-xl p-6 border border-white/10 shadow-inner hover:shadow-lg transition">
+            <h3 className="text-xl font-semibold mb-3 text-green-300">{t('fairplay_title')}</h3>
+            <ul className="list-disc list-inside space-y-2 text-gray-200">
+              <li>{t('fair_1')}</li>
+              <li>{t('fair_2')}</li>
+              <li>{t('fair_3')}</li>
+              <li>{t('fair_4')}</li>
+              <li>{t('fair_5')}</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="text-center text-gray-300 text-md border-t border-white/10 pt-6">
+          {t('footer_text')} <br />
+          <span className="font-bold text-white">{t('footer_glhf')}</span>
+        </div>
       </div>
     </div>
   );
