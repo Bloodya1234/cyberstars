@@ -1,171 +1,160 @@
+// src/app/api/steam/return/route.js
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
+// --- Firebase Admin (через BASE64 приватный ключ) ---
 const serviceAccount = {
   projectId: process.env.FIREBASE_PROJECT_ID,
   clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  privateKey: Buffer.from(process.env.FIREBASE_PRIVATE_KEY_BASE64, 'base64').toString('utf8'),
+  privateKey: Buffer.from(process.env.FIREBASE_PRIVATE_KEY_BASE64 || '', 'base64').toString('utf8'),
 };
-
-if (!getApps().length) {
-  initializeApp({ credential: cert(serviceAccount) });
-}
-
+if (!getApps().length) initializeApp({ credential: cert(serviceAccount) });
 const auth = getAuth();
 const db = getFirestore();
 
+// helper
 function steam64To32(steam64) {
-  return String(BigInt(steam64) - BigInt('76561197960265728'));
+  try {
+    return String(BigInt(steam64) - BigInt('76561197960265728'));
+  } catch {
+    return '';
+  }
+}
+function extractSteamId64FromClaimedId(claimedId) {
+  try {
+    const parts = claimedId.split('/');
+    return parts[parts.length - 1];
+  } catch {
+    return null;
+  }
 }
 
 export async function GET(req) {
-  const url = new URL(req.nextUrl);
-  const params = Object.fromEntries(url.searchParams.entries());
-
-  console.log('🔍 Full incoming URL:', url.toString());
-  console.log('🔎 openid.return_to:', params['openid.return_to']);
-  console.log('🔎 openid.realm (should match return_to root):', 'https://localhost:3000/');
-
-  // 🚨 Handle Steam OpenID failure
-  if (params['openid.mode'] === 'error') {
-    console.error('❌ Steam login error:', params['openid.error']);
-    return NextResponse.json({ error: params['openid.error'] || 'Steam OpenID error' }, { status: 400 });
-  }
-
-  // 🚨 Handle missing required OpenID fields
-  if (!params['openid.signed'] || !params['openid.assoc_handle'] || !params['openid.sig']) {
-    return NextResponse.json({ error: 'Missing OpenID response parameters' }, { status: 400 });
-  }
-
-  // 1. Validate OpenID response with Steam
-  const body = new URLSearchParams({
-    'openid.assoc_handle': params['openid.assoc_handle'],
-    'openid.signed': params['openid.signed'],
-    'openid.sig': params['openid.sig'],
-    'openid.ns': 'http://specs.openid.net/auth/2.0',
-  });
-
   try {
-    for (const field of params['openid.signed'].split(',')) {
-      body.set(`openid.${field}`, params[`openid.${field}`]);
+    const url = new URL(req.url);
+    const origin = url.origin; // важен точный origin (прод/preview)
+    const sp = url.searchParams;
+
+    // базовые проверки
+    const mode = sp.get('openid.mode');
+    const claimedId = sp.get('openid.claimed_id');
+    if (mode !== 'id_res' || !claimedId) {
+      return NextResponse.json({ error: 'Invalid OpenID response' }, { status: 400 });
     }
-  } catch (err) {
-    console.error('❌ Failed to parse signed OpenID fields:', err);
-    return NextResponse.json({ error: 'Invalid OpenID signed fields' }, { status: 400 });
-  }
 
-  console.log('📦 Body sent to Steam OpenID endpoint:');
-  console.log(body.toString());
-
-  const steamRes = await fetch('https://steamcommunity.com/openid/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
-  });
-
-  const responseText = await steamRes.text();
-  console.log('📥 Steam OpenID verification response:');
-  console.log(responseText);
-
-  if (!responseText.includes('is_valid:true')) {
-    console.error('❌ Steam login verification failed');
-    return NextResponse.json({ error: 'Steam login verification failed' }, { status: 400 });
-  }
-
-  // 2. Extract SteamID
-  const claimedId = params['openid.claimed_id'];
-  const steamID64 = claimedId?.split('/').pop();
-  const steamId32 = steam64To32(steamID64);
-  const firebaseUID = `steam:${steamID64}`;
-
-  // 3. Fetch Steam profile
-  let displayName = 'Steam User';
-  let avatar = '';
-  try {
-    const steamApiUrl = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${process.env.STEAM_API_KEY}&steamids=${steamID64}`;
-    const res = await fetch(steamApiUrl);
-    const data = await res.json();
-    const player = data.response?.players?.[0];
-
-    if (player) {
-      displayName = player.personaname || displayName;
-      avatar = player.avatarfull || avatar;
+    // Составляем ПОЛНЫЙ набор openid.* обратно и меняем режим на check_authentication
+    const verifyParams = new URLSearchParams();
+    for (const [k, v] of sp.entries()) {
+      if (k.startsWith('openid.')) verifyParams.append(k, v);
     }
-  } catch (err) {
-    console.warn('⚠️ Failed to fetch Steam profile:', err);
-  }
+    verifyParams.set('openid.mode', 'check_authentication');
 
-  // 4. Fetch top heroes
-  let topHeroes = [];
-  try {
-    const res = await fetch(`https://api.opendota.com/api/players/${steamId32}/heroes`);
-    const data = await res.json();
-    topHeroes = (Array.isArray(data) ? data : [])
-      .sort((a, b) => b.games - a.games)
-      .slice(0, 3)
-      .map((h) => h.hero_id);
-  } catch (err) {
-    console.warn('⚠️ Could not fetch most played heroes');
-  }
+    const verifyRes = await fetch('https://steamcommunity.com/openid/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: verifyParams.toString(),
+    });
+    const verifyText = await verifyRes.text();
 
-  // 5. Create or update Firebase user
-  const inviteTeam = url.searchParams.get('inviteTeam');
-  const invites = inviteTeam
-    ? { incoming: [inviteTeam], outgoing: [] }
-    : { incoming: [], outgoing: [] };
+    const isValid = verifyRes.ok && verifyText.includes('is_valid:true');
+    if (!isValid) {
+      console.error('Steam OpenID verify response:', verifyText);
+      return NextResponse.json({ error: 'Steam login verification failed' }, { status: 400 });
+    }
 
-  const userRef = db.collection('users').doc(firebaseUID);
-  const userDoc = await userRef.get();
+    // Извлекаем SteamID64
+    const steamId64 = extractSteamId64FromClaimedId(claimedId);
+    if (!steamId64) {
+      return NextResponse.json({ error: 'Cannot extract steamId' }, { status: 400 });
+    }
 
-  const baseUser = {
-    steamId: firebaseUID,
-    steamId64,
-    steamId32,
-    name: displayName,
-    avatar,
-    language: 'en',
-    mmr: { solo: null, party: null },
-    winRate: null,
-    mostPlayedHeroes: topHeroes,
-    matches: [],
-    invites,
-    team: null,
-    teamId: null,
-    discord: {},
-    openForInvites: true,
-  };
+    const steamId32 = steam64To32(steamId64);
+    const firebaseUID = `steam:${steamId64}`;
 
-  if (!userDoc.exists) {
-    await userRef.set(baseUser);
-  } else {
-    await userRef.update({
-      name: displayName,
-      avatar,
+    // (Опционально) Подтягиваем профиль Steam, если есть ключ
+    let displayName = 'Steam User';
+    let avatar = '';
+    if (process.env.STEAM_API_KEY) {
+      try {
+        const steamApiUrl = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${process.env.STEAM_API_KEY}&steamids=${steamId64}`;
+        const res = await fetch(steamApiUrl);
+        const data = await res.json();
+        const player = data?.response?.players?.[0];
+        if (player) {
+          displayName = player.personaname || displayName;
+          avatar = player.avatarfull || avatar;
+        }
+      } catch (e) {
+        console.warn('Steam profile fetch failed:', e);
+      }
+    }
+
+    // (Опционально) Топ-герои из OpenDota
+    let topHeroes = [];
+    try {
+      const r = await fetch(`https://api.opendota.com/api/players/${steamId32}/heroes`);
+      const j = await r.json();
+      topHeroes = (Array.isArray(j) ? j : [])
+        .sort((a, b) => b.games - a.games)
+        .slice(0, 3)
+        .map(h => h.hero_id);
+    } catch (e) {
+      console.warn('OpenDota heroes fetch failed');
+    }
+
+    // Создаём/обновляем пользователя в Firestore
+    const inviteTeam = sp.get('inviteTeam') || '';
+    const userRef = db.collection('users').doc(firebaseUID);
+    const snap = await userRef.get();
+
+    const baseUser = {
+      steamId: firebaseUID,
       steamId64,
       steamId32,
+      name: displayName,
+      avatar,
+      language: 'en',
+      mmr: { solo: null, party: null },
+      winRate: null,
       mostPlayedHeroes: topHeroes,
-      ...(inviteTeam && { invites }),
-    });
+      matches: [],
+      invites: inviteTeam ? { incoming: [inviteTeam], outgoing: [] } : { incoming: [], outgoing: [] },
+      team: null,
+      teamId: null,
+      discord: {},
+      openForInvites: true,
+    };
+
+    if (!snap.exists) {
+      await userRef.set(baseUser);
+    } else {
+      await userRef.update({
+        name: displayName,
+        avatar,
+        steamId64,
+        steamId32,
+        mostPlayedHeroes: topHeroes,
+        ...(inviteTeam ? { invites: { incoming: [inviteTeam], outgoing: [] } } : {}),
+      });
+    }
+
+    // Firebase custom token
+    const customToken = await auth.createCustomToken(firebaseUID);
+
+    // Редиректим на /steam-login c токеном + steamId (+inviteTeam)
+    const redirectUrl = new URL('/steam-login', origin);
+    redirectUrl.searchParams.set('token', customToken);
+    redirectUrl.searchParams.set('steamId', steamId64);
+    if (inviteTeam) redirectUrl.searchParams.set('inviteTeam', inviteTeam);
+
+    return NextResponse.redirect(redirectUrl.toString(), { status: 302 });
+  } catch (err) {
+    console.error('Steam return handler error:', err);
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
-
-  const token = await auth.createCustomToken(firebaseUID);
-
-  // 6. Redirect to frontend with session storage and token
-  const redirectHtml = `
-    <html>
-      <head><script>
-        sessionStorage.setItem("steamId", "${firebaseUID}");
-        sessionStorage.setItem("token", "${token}");
-        ${inviteTeam ? `sessionStorage.setItem("inviteTeam", "${inviteTeam}");` : ''}
-        window.location.href = "/steam-login";
-      </script></head>
-      <body>Redirecting...</body>
-    </html>
-  `;
-
-  return new NextResponse(redirectHtml, {
-    headers: { 'Content-Type': 'text/html' },
-  });
 }
