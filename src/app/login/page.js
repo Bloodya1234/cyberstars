@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import LoginClient from './LoginClient';
+import LoginScreen from './LoginScreen';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -8,8 +8,8 @@ export const fetchCache = 'default-no-store';
 
 export default function Page() {
   return (
-    <Suspense fallback={<div className="p-6 text-center">Loading…</div>}>
-      <LoginClient />
+    <Suspense fallback={<div className="p-6 text-white">Loading…</div>}>
+      <LoginScreen />
     </Suspense>
   );
 }
