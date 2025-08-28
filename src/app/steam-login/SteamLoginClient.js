@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { signInWithCustomToken, signOut } from 'firebase/auth';
+import { getAuth, signInWithCustomToken, signOut } from 'firebase/auth';
 import { doc, updateDoc, getFirestore } from 'firebase/firestore';
 import { auth, app } from '@/firebase';
-import Image from 'next/image';
 
 const db = getFirestore(app);
 
@@ -34,6 +33,7 @@ export default function SteamLoginClient() {
 
         const idToken = await userCredential.user.getIdToken();
 
+        // Send token to create session cookie
         const res = await fetch('/api/sessionLogin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -43,6 +43,7 @@ export default function SteamLoginClient() {
 
         if (!res.ok) throw new Error('Session cookie creation failed');
 
+        // Optional: Save Discord
         if (discord) {
           try {
             const userRef = doc(db, 'users', `steam:${steamId}`);
@@ -53,14 +54,22 @@ export default function SteamLoginClient() {
         }
 
         setTimeout(() => {
-          router.push('/connect-discord'); // или /profile
+          router.push('/connect-discord'); // or /profile
         }, 1000);
       })
       .catch((err) => {
         console.error('Login failed:', err);
-        setStatus('❌ Firebase login failed');
+
+        // 🔍 Расширенные логи для отладки
+        const details = [
+          `code: ${err?.code || 'n/a'}`,
+          `message: ${err?.message || 'n/a'}`,
+          `name: ${err?.name || 'n/a'}`
+        ].join(' | ');
+
+        setStatus(`❌ Firebase login failed → ${details}`);
       });
-  }, [searchParams, router, setAvatar]);
+  }, [searchParams, router]);
 
   const handleLogout = async () => {
     try {
@@ -77,14 +86,12 @@ export default function SteamLoginClient() {
     <div className="text-center p-6">
       <h2 className="text-xl font-semibold mb-2">{status}</h2>
       {avatar && (
-        <Image
+        <img
           src={avatar}
           alt="Steam Avatar"
           className="rounded-full mx-auto mb-4"
           width={100}
           height={100}
-          priority
-          unoptimized
         />
       )}
       <button
