@@ -41,7 +41,7 @@ export default function ConnectDiscordPage() {
         const id64 = me.uid.startsWith('steam:') ? me.uid.slice('steam:'.length) : me.uid;
         setSteamId(id64);
 
-        // Запрашиваем кастомный токен (опционально)
+        // Опционально берём новый custom token для state
         const tokRes = await fetch('/api/steam/steam-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -75,6 +75,7 @@ export default function ConnectDiscordPage() {
   }, [router]);
 
   const handleConnectDiscord = useCallback(() => {
+    // Если нет uid/steamId — сначала логиним через Steam
     if (!uid || !steamId) {
       handleSteamLogin();
       return;
@@ -115,8 +116,8 @@ export default function ConnectDiscordPage() {
           <div className="flex gap-3">
             <button
               onClick={handleConnectDiscord}
-              className="px-6 py-3 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
-              disabled={!uid}
+              className="px-6 py-3 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+              title={!uid ? 'Login with Steam first — click and I will redirect you' : 'Connect your Discord account'}
             >
               Connect Discord
             </button>
