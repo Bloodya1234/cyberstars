@@ -1,35 +1,27 @@
-import { adminAuth, db } from './firebase-admin';
+// src/lib/auth.js
 import { cookies } from 'next/headers';
+import { adminAuth } from './firebase-admin';
 
+/**
+ * Возвращает { user: { uid } } если сессия валидна, иначе null.
+ * Проверяется именно session cookie, которую мы ставим в /api/sessionLogin.
+ */
 export async function getAuthSession() {
   try {
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('__session')?.value;
-
+    const sessionCookie = cookieStore.get('session')?.value;
     if (!sessionCookie) {
-      console.warn('❌ No session cookie found');
+      // Нет куки — нет сессии
       return null;
     }
 
-    const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
-    console.log('✅ Session verified. UID:', decoded.uid);
+    // "checkRevoked: true" — опционально, но полезно.
+    const decoded = await adminAuth().verifySessionCookie(sessionCookie, true);
 
-    // 🔍 Fetch user document from Firestore to get role
-    const userSnap = await db.collection('users').doc(decoded.uid).get();
-    const userData = userSnap.exists ? userSnap.data() : {};
-
-    return {
-      user: {
-        uid: decoded.uid,
-        steamId: decoded.uid, // ✅ as expected by your system
-        email: decoded.email || null,
-        name: decoded.name || null,
-        avatar: decoded.avatar || null,
-        role: userData.role || 'user', // 👈 fallback to "user"
-      },
-    };
+    // decoded.uid = наш UID вида "steam:7656..."
+    return { user: { uid: decoded.uid } };
   } catch (err) {
-    console.error('❌ Failed to verify session cookie:', err.message || err);
+    console.error('getAuthSession() verifySessionCookie error:', err);
     return null;
   }
 }

@@ -1,30 +1,49 @@
+// src/app/api/user-info/route.js
 import { db } from '@/lib/firebase-admin';
 import { getAuthSession } from '@/lib/auth';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
     const session = await getAuthSession();
 
     if (!session?.user?.uid) {
-      console.warn('No session found');
-      return new Response('Unauthorized', { status: 401 });
+      console.warn('[user-info] No valid session cookie');
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    const userSnap = await db.collection('users').doc(session.user.uid).get();
+    const uid = session.user.uid; // "steam:7656..."
+    const snap = await db.collection('users').doc(uid).get();
 
-    if (!userSnap.exists) {
-      console.warn('User doc not found for UID:', session.user.uid);
-      return new Response('User not found', { status: 404 });
+    if (!snap.exists) {
+      console.warn('[user-info] User doc not found for UID:', uid);
+      return new Response(JSON.stringify({ error: 'User not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    const user = userSnap.data();
+    const user = snap.data();
 
     return new Response(
-      JSON.stringify({ uid: session.user.uid, role: user.role || 'user' }),
-      { status: 200 }
+      JSON.stringify({
+        uid,
+        name: user.name || null,
+        teamId: user.teamId || null,
+        role: user.role || 'user',
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (err) {
     console.error('🔥 /api/user-info error:', err);
-    return new Response('Internal Server Error', { status: 500 });
+    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 }
