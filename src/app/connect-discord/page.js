@@ -3,95 +3,53 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAuth, signInWithCustomToken } from 'firebase/auth';
-import { app } from '@/firebase';
-
-const auth = getAuth(app);
 
 export default function ConnectDiscordPage() {
   const router = useRouter();
-  const [steamId, setSteamId] = useState(null);  // SteamID64 без префикса
-  const [uid, setUid] = useState(null);          // Firebase UID: steam:xxxx
-  const [token, setToken] = useState(null);      // custom token (для state)
+  const [steamId, setSteamId] = useState(null);
+  const [uid, setUid] = useState(null);
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorText, setErrorText] = useState('');
 
-  // Пытаемся получить сессию. Если её нет — пробуем «дожать» из sessionStorage.
   useEffect(() => {
     let cancelled = false;
-
-    const whoAmI = async () => {
-      const res = await fetch('/api/user-info', { credentials: 'include' });
-      if (!res.ok) return null;
-      return res.json();
-    };
-
-    const bootstrapFromSessionStorage = async () => {
-      // Пробуем токен и steamId, положенные /api/steam/return
-      const ssToken = sessionStorage.getItem('token');
-      const ssSteam = sessionStorage.getItem('steamId'); // steam:7656... или 7656...
-      if (!ssToken) return null;
-
-      try {
-        const cred = await signInWithCustomToken(auth, ssToken);
-        const idToken = await cred.user.getIdToken();
-
-        // Создаём серверную сессию (httpOnly cookie)
-        const resp = await fetch('/api/sessionLogin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ token: idToken }),
-        });
-        if (!resp.ok) return null;
-
-        // Вернём данные пользователя
-        const me = await whoAmI();
-        return me;
-      } catch (e) {
-        console.error('Bootstrap from sessionStorage failed:', e);
-        return null;
-      }
-    };
-
     (async () => {
       try {
         setLoading(true);
         setErrorText('');
 
-        // 1) Пытаемся узнать, кто мы, по серверной куке.
-        let me = await whoAmI();
-
-        // 2) Если серверая сессия отсутствует — пробуем восстановить из sessionStorage.
-        if (!me) {
-          me = await bootstrapFromSessionStorage();
-        }
-
-        if (!me || !me.uid) {
+        const meRes = await fetch('/api/user-info', { credentials: 'include' });
+        if (!meRes.ok) {
           setErrorText('Missing Steam session. Please login with Steam again.');
+          setLoading(false);
+          return;
+        }
+        const me = await meRes.json();
+        if (!me?.uid || typeof me.uid !== 'string') {
+          setErrorText('Session is invalid. Please login with Steam again.');
+          setLoading(false);
           return;
         }
 
         if (cancelled) return;
 
-        // Устанавливаем uid и steamId
         setUid(me.uid);
         const id64 = me.uid.startsWith('steam:') ? me.uid.slice('steam:'.length) : me.uid;
         setSteamId(id64);
 
-        // Опционально — запросим новый custom token для передачи в state Discord
-        try {
-          const tokRes = await fetch('/api/steam/steam-token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ steamId: id64 }),
-          });
-          if (tokRes.ok) {
-            const { token: t } = await tokRes.json();
-            if (!cancelled) setToken(t || null);
-          }
-        } catch {}
+        // токен для state — nice-to-have, но не обязателен
+        const tokRes = await fetch('/api/steam/steam-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ steamId: id64 }),
+        });
+
+        if (tokRes.ok) {
+          const { token: t } = await tokRes.json();
+          if (!cancelled) setToken(t || null);
+        }
       } catch (e) {
         console.error(e);
         if (!cancelled) setErrorText('Unexpected error. Please login again.');
@@ -100,9 +58,7 @@ export default function ConnectDiscordPage() {
       }
     })();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   const handleSteamLogin = useCallback(() => {
@@ -110,7 +66,6 @@ export default function ConnectDiscordPage() {
   }, [router]);
 
   const handleConnectDiscord = useCallback(() => {
-    // Если всё ещё нет uid/steamId — ведём на логин Steam
     if (!uid || !steamId) {
       handleSteamLogin();
       return;
@@ -121,16 +76,23 @@ export default function ConnectDiscordPage() {
     const state = btoa(JSON.stringify(stateObj));
 
     const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
-    const redirectUri = process.env.NEXT_PUBLIC_DISCORD_REDIRECT_URI;
 
-    const url =
+    // ✅ строим redirectUri строго из текущего origin
+    const base = typeof window !== 'undefined' ? window.location.origin : '';
+    const fallback = process.env.NEXT_PUBLIC_DISCORD_REDIRECT_URI || '';
+    const redirectUri = base ? `${base}/api/discord/callback` : fallback;
+
+    // На всякий случай выведем в лог, чтобы увидеть, что реально уходит в Discord
+    console.log('Discord redirect_uri:', redirectUri);
+
+    const discordAuthUrl =
       `https://discord.com/oauth2/authorize` +
       `?client_id=${encodeURIComponent(clientId)}` +
       `&redirect_uri=${encodeURIComponent(redirectUri)}` +
       `&response_type=code&scope=identify` +
       `&state=${encodeURIComponent(state)}`;
 
-    window.location.href = url;
+    window.location.href = discordAuthUrl;
   }, [uid, steamId, token, handleSteamLogin]);
 
   return (
@@ -149,8 +111,8 @@ export default function ConnectDiscordPage() {
           <div className="flex gap-3">
             <button
               onClick={handleConnectDiscord}
-              className="px-6 py-3 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-              title={!uid ? 'Click to login with Steam first' : 'Connect your Discord account'}
+              className="px-6 py-3 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
+              disabled={!uid}
             >
               Connect Discord
             </button>
