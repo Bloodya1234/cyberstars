@@ -4,6 +4,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
+const PUBLIC_BASE =
+  process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/+$/,'') || 'https://cyberstars.vercel.app'; // <— твой прод домен
+
 export default function ConnectDiscordPage() {
   const router = useRouter();
   const [steamId, setSteamId] = useState(null);
@@ -26,7 +29,7 @@ export default function ConnectDiscordPage() {
           return;
         }
         const me = await meRes.json();
-        if (!me?.uid || typeof me.uid !== 'string') {
+        if (!me?.uid) {
           setErrorText('Session is invalid. Please login with Steam again.');
           setLoading(false);
           return;
@@ -38,14 +41,12 @@ export default function ConnectDiscordPage() {
         const id64 = me.uid.startsWith('steam:') ? me.uid.slice('steam:'.length) : me.uid;
         setSteamId(id64);
 
-        // токен для state — nice-to-have, но не обязателен
         const tokRes = await fetch('/api/steam/steam-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({ steamId: id64 }),
         });
-
         if (tokRes.ok) {
           const { token: t } = await tokRes.json();
           if (!cancelled) setToken(t || null);
@@ -76,14 +77,7 @@ export default function ConnectDiscordPage() {
     const state = btoa(JSON.stringify(stateObj));
 
     const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
-
-    // ✅ строим redirectUri строго из текущего origin
-    const base = typeof window !== 'undefined' ? window.location.origin : '';
-    const fallback = process.env.NEXT_PUBLIC_DISCORD_REDIRECT_URI || '';
-    const redirectUri = base ? `${base}/api/discord/callback` : fallback;
-
-    // На всякий случай выведем в лог, чтобы увидеть, что реально уходит в Discord
-    console.log('Discord redirect_uri:', redirectUri);
+    const redirectUri = `${PUBLIC_BASE}/api/discord/callback`; // <— ЕДИНЫЙ callback
 
     const discordAuthUrl =
       `https://discord.com/oauth2/authorize` +

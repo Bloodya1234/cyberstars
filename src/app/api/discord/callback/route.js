@@ -5,57 +5,40 @@ import { db } from '@/lib/firebase-admin';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+const BASE =
+  process.env.BASE_URL?.replace(/\/+$/,'') ||
+  process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/+$/,'') ||
+  'https://cyberstars.vercel.app'; // <— тот же прод домен
+
 export async function GET(req) {
+  const url = new URL(req.url);
+  const origin = BASE; // принудительно один домен
+  const code = url.searchParams.get('code');
+  const stateEncoded = url.searchParams.get('state');
+
+  if (!code || !stateEncoded) {
+    return NextResponse.json({ error: 'Missing code or state' }, { status: 400 });
+  }
+
+  let steamId, token;
   try {
-    const url = new URL(req.url);
-    const origin = url.origin;
+    const stateObj = JSON.parse(Buffer.from(stateEncoded, 'base64').toString('utf8'));
+    steamId = stateObj.steamId;
+    token = stateObj.token; // может отсутствовать — это ок
+    if (!steamId) throw new Error('Missing steamId in state');
+  } catch (err) {
+    return NextResponse.json({ error: 'Invalid state', message: err.message }, { status: 400 });
+  }
 
-    // --- 0) Параметры запроса от Discord ---
-    const code = url.searchParams.get('code');
-    const stateEncoded = url.searchParams.get('state');
+  try {
+    const redirectUri = `${origin}/api/discord/callback`; // ДОЛЖЕН совпадать с authorize
 
-    if (!code || !stateEncoded) {
-      console.error('Discord callback: missing code/state');
-      return NextResponse.json({ error: 'Missing code or state' }, { status: 400 });
-    }
-
-    // --- 1) Разбираем state (требуем только steamId) ---
-    let steamId; // может быть "7656..." или "steam:7656..."
-    try {
-      const stateObj = JSON.parse(Buffer.from(stateEncoded, 'base64').toString('utf8'));
-      steamId = stateObj?.steamId;
-      if (!steamId) throw new Error('steamId missing in state');
-    } catch (err) {
-      console.error('Discord callback: invalid state:', err?.message || err);
-      return NextResponse.json({ error: 'Invalid state' }, { status: 400 });
-    }
-
-    // Нормализуем uid для Firestore
-    const docId = String(steamId).startsWith('steam:') ? String(steamId) : `steam:${steamId}`;
-
-    // --- 2) Должны использовать ТОТ ЖЕ redirect_uri, что и в authorize ---
-    // Порядок приоритета: DISCORD_REDIRECT_URI -> NEXT_PUBLIC_DISCORD_REDIRECT_URI -> {origin}/api/discord/callback
-    const redirectUri =
-      process.env.DISCORD_REDIRECT_URI ||
-      process.env.NEXT_PUBLIC_DISCORD_REDIRECT_URI ||
-      `${origin}/api/discord/callback`;
-
-    // Полезно проверить, что реально пришли на этот же URL (чисто лог)
-    if (!redirectUri.startsWith(origin)) {
-      console.warn(
-        'Discord callback: redirect_uri env does not match current origin.',
-        'origin=', origin,
-        'redirectUri=', redirectUri
-      );
-    }
-
-    // --- 3) Обмениваем code -> access_token ---
     const params = new URLSearchParams({
-      client_id: process.env.DISCORD_CLIENT_ID || '',
-      client_secret: process.env.DISCORD_CLIENT_SECRET || '',
+      client_id: process.env.DISCORD_CLIENT_ID,
+      client_secret: process.env.DISCORD_CLIENT_SECRET,
       grant_type: 'authorization_code',
       code,
-      redirect_uri: redirectUri, // ДОЛЖЕН совпадать с тем, что было в authorize
+      redirect_uri: redirectUri,
     });
 
     const discordRes = await fetch('https://discord.com/api/oauth2/token', {
@@ -63,27 +46,18 @@ export async function GET(req) {
       body: params,
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     });
+    const discordData = await discordRes.json();
 
-    const discordData = await discordRes.json().catch(() => ({}));
-    if (!discordRes.ok || !discordData?.access_token) {
-      console.error('Discord token exchange failed:', discordData);
-      return NextResponse.json({ error: 'Token exchange failed' }, { status: 500 });
+    if (!discordRes.ok || !discordData.access_token) {
+      return NextResponse.json({ error: 'Token exchange failed', details: discordData }, { status: 500 });
     }
 
-    // --- 4) Получаем профиль пользователя Discord ---
     const userRes = await fetch('https://discord.com/api/users/@me', {
       headers: { Authorization: `Bearer ${discordData.access_token}` },
     });
-    const discordUser = await userRes.json().catch(() => ({}));
-
-    if (!discordRes.ok && userRes.status === 401) {
-      console.error('Discord /users/@me unauthorized');
-      return NextResponse.json({ error: 'Discord auth failed' }, { status: 401 });
-    }
-
-    if (!discordUser?.id || !discordUser?.username) {
-      console.error('Invalid Discord user response:', discordUser);
-      return NextResponse.json({ error: 'Invalid Discord user response' }, { status: 500 });
+    const discordUser = await userRes.json();
+    if (!discordUser.id || !discordUser.username) {
+      return NextResponse.json({ error: 'Invalid Discord user response', details: discordUser }, { status: 500 });
     }
 
     const discordTag =
@@ -91,20 +65,20 @@ export async function GET(req) {
         ? `${discordUser.username}#${discordUser.discriminator}`
         : discordUser.username;
 
-    // --- 5) Сохраняем/обновляем в Firestore ---
+    const docId = steamId.startsWith('steam:') ? steamId : `steam:${steamId}`;
+
     await db.collection('users').doc(docId).set(
       {
         discord: {
           id: discordUser.id,
           tag: discordTag,
-          avatar: discordUser.avatar || null,
+          avatar: discordUser.avatar,
         },
         joinedDiscordServer: false,
       },
       { merge: true }
     );
 
-    // --- 6) (опционально) Пингуем ваш бот-сервер ---
     try {
       const botUrl = process.env.BOT_SERVER_URL;
       if (botUrl) {
@@ -114,14 +88,13 @@ export async function GET(req) {
           body: JSON.stringify({ discordId: discordUser.id }),
         }).catch(() => {});
       }
-    } catch {
-      // не фейлим, если бот недоступен
-    }
+    } catch {}
 
-    // --- 7) Готово — отправляем пользователя в профиль ---
-    return NextResponse.redirect(`${origin}/profile`, { status: 302 });
+    return NextResponse.redirect(`${origin}/profile`);
   } catch (err) {
-    console.error('Discord OAuth failed:', err?.message || err);
-    return NextResponse.json({ error: 'Discord OAuth failed' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Discord OAuth failed', message: err.message },
+      { status: 500 }
+    );
   }
 }
