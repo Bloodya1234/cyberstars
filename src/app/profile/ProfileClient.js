@@ -18,7 +18,6 @@ function steam64To32(steam64) {
 }
 
 function EligibilityModal({ show, onClose, t }) {
-  const { t: tModal } = useTranslation('common');
   if (!show) return null;
   return (
     <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
@@ -76,24 +75,24 @@ async function syncRankedMatchCount(steamId32, userDocId, db) {
 
 export default function ProfileClient() {
   const { t } = useTranslation('common');
-  const handleChangeLanguage = (lng) => {
-    i18n.changeLanguage(lng);
-  };
+  const router = useRouter();
 
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dotaStats, setDotaStats] = useState(null);
   const [preferredPositions, setPreferredPositions] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const router = useRouter();
 
+  // Справочники
   const positionOptions = ['Carry', 'Mid Lane', 'Offlane', 'Support', 'Hard Support'];
   const languageOptions = ['English', 'Russian', 'Spanish', 'French', 'German', 'Chinese'];
 
+  // Условие допуска
   const isEligible =
     (user?.rankedMatchCount || 0) >= 200 &&
     user?.publicMatchHistory === true;
 
+  // Показать модалку с условиями при первом заходе
   useEffect(() => {
     const seen = localStorage.getItem('seenEligibilityModal');
     if (!seen) {
@@ -213,7 +212,7 @@ export default function ProfileClient() {
             const heroId = match.hero_id;
             const heroName = heroIdToName[heroId] || heroId;
             const formattedHeroName = heroName.toLowerCase().replace(/[\s-]/g, '_');
-            const heroImg = `/apps/dota2/images/heroes/${formattedHeroName}_full.png`; // relative path for cdn.opendota.com
+            const heroImg = `/apps/dota2/images/heroes/${formattedHeroName}_full.png`; // относительный путь для cdn.opendota.com
 
             return {
               hero: heroName,
@@ -277,13 +276,6 @@ export default function ProfileClient() {
   if (loading) return <div className="p-6 text-center text-white">Loading...</div>;
   if (!user || !dotaStats) return <div className="p-6 text-center text-red-500">User not found or Dota stats missing.</div>;
 
-  const isEligible =
-    (user?.rankedMatchCount || 0) >= 200 &&
-    user?.publicMatchHistory === true;
-
-  const positionOptions = ['Carry', 'Mid Lane', 'Offlane', 'Support', 'Hard Support'];
-  const languageOptions = ['English', 'Russian', 'Spanish', 'French', 'German', 'Chinese'];
-
   return (
     <ClientLayout>
       <div className="min-h-screen bg-background text-primary">
@@ -308,9 +300,7 @@ export default function ProfileClient() {
               <h1 className="text-4xl font-extrabold uppercase text-accent text-glow tracking-wide">
                 {user.name || 'Unknown'}
               </h1>
-              <p className="text-[10px] text-accent mt-1">
-                Steam ID: {user.steamId}
-              </p>
+              <p className="text-[10px] text-accent mt-1">Steam ID: {user.steamId}</p>
 
               <p className={`text-[10px] font-semibold mt-2 ${isEligible ? 'text-green-400' : 'text-red-500'}`}>
                 {isEligible ? t('profile.eligible') : t('profile.not_eligible')}
@@ -326,10 +316,7 @@ export default function ProfileClient() {
                 {user.openForInvites ? t('profile.open_invites') : t('profile.closed_invites')}
               </button>
 
-              <button
-                onClick={() => setShowModal(true)}
-                className="glow-button glow-orange"
-              >
+              <button onClick={() => setShowModal(true)} className="glow-button glow-orange">
                 {t('profile.instructions')}
               </button>
             </div>
@@ -393,7 +380,7 @@ export default function ProfileClient() {
                   {t('profile.languages_spoken')}
                 </h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {['English', 'Russian', 'Spanish', 'French', 'German', 'Chinese'].map((lang) => (
+                  {languageOptions.map((lang) => (
                     <button
                       key={lang}
                       onClick={() => handleToggle('languages', lang, user.languages || [])}
@@ -411,7 +398,7 @@ export default function ProfileClient() {
                   {t('profile.preferred_positions')}
                 </h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {['Carry', 'Mid Lane', 'Offlane', 'Support', 'Hard Support'].map((pos) => (
+                  {positionOptions.map((pos) => (
                     <button
                       key={pos}
                       onClick={() => handleToggle('preferredPositions', pos, preferredPositions)}
