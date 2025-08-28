@@ -1,22 +1,29 @@
+// src/lib/firebase-admin.js
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
-function getServiceAccountFromEnv() {
-  const b64 = process.env.FIREBASE_PRIVATE_KEY_BASE64;
-  if (!b64) throw new Error('FIREBASE_PRIVATE_KEY_BASE64 is missing');
-  const json = JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
-  return {
-    projectId: json.project_id || process.env.FIREBASE_PROJECT_ID,
-    clientEmail: json.client_email || process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: json.private_key,
-  };
+// Мы ожидаем, что FIREBASE_PRIVATE_KEY_BASE64 — это base64 только от PEM-ключа,
+// а projectId и clientEmail приходят отдельными переменными окружения.
+const privateKeyB64 = process.env.FIREBASE_PRIVATE_KEY_BASE64;
+if (!privateKeyB64) {
+  throw new Error('FIREBASE_PRIVATE_KEY_BASE64 is missing');
+}
+const privateKey = Buffer.from(privateKeyB64, 'base64').toString('utf8');
+
+const serviceAccount = {
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+  privateKey,
+};
+
+if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
+  throw new Error('Firebase Admin credentials are incomplete (check FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY_BASE64)');
 }
 
 if (!getApps().length) {
-  const serviceAccount = getServiceAccountFromEnv();
   initializeApp({ credential: cert(serviceAccount) });
 }
 
-export const adminAuth = () => getAuth();
-export const db = getFirestore();
+export const adminAuth = getAuth();
+export const adminDb = getFirestore();

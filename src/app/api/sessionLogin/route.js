@@ -1,5 +1,4 @@
 // src/app/api/sessionLogin/route.js
-
 import { cookies } from 'next/headers';
 import { adminAuth } from '@/lib/firebase-admin';
 
@@ -16,11 +15,9 @@ export async function POST(req) {
       });
     }
 
-    // Проверяем и создаём session cookie через Admin SDK
     const expiresIn = 7 * 24 * 60 * 60 * 1000; // 7 дней
     const sessionCookie = await adminAuth().createSessionCookie(token, { expiresIn });
 
-    // Ставим httpOnly cookie
     const cookieStore = await cookies();
     cookieStore.set('session', sessionCookie, {
       path: '/',
