@@ -3,19 +3,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
-import { getApps, initializeApp, cert } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-
-// --- Firebase Admin (через BASE64 приватный ключ) ---
-const serviceAccount = {
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  privateKey: Buffer.from(process.env.FIREBASE_PRIVATE_KEY_BASE64 || '', 'base64').toString('utf8'),
-};
-if (!getApps().length) initializeApp({ credential: cert(serviceAccount) });
-const auth = getAuth();
-const db = getFirestore();
+import { db, adminAuth } from '@/lib/firebase-admin';
 
 // helper
 function steam64To32(steam64) {
@@ -25,6 +13,7 @@ function steam64To32(steam64) {
     return '';
   }
 }
+
 function extractSteamId64FromClaimedId(claimedId) {
   try {
     const parts = claimedId.split('/');
@@ -76,7 +65,7 @@ export async function GET(req) {
     const steamId32 = steam64To32(steamId64);
     const firebaseUID = `steam:${steamId64}`;
 
-    // (Опционально) Подтягиваем профиль Steam, если есть ключ
+    // (Опционально) Подтягиваем профиль Steam
     let displayName = 'Steam User';
     let avatar = '';
     if (process.env.STEAM_API_KEY) {
@@ -103,7 +92,7 @@ export async function GET(req) {
         .sort((a, b) => b.games - a.games)
         .slice(0, 3)
         .map(h => h.hero_id);
-    } catch (e) {
+    } catch {
       console.warn('OpenDota heroes fetch failed');
     }
 
@@ -123,7 +112,9 @@ export async function GET(req) {
       winRate: null,
       mostPlayedHeroes: topHeroes,
       matches: [],
-      invites: inviteTeam ? { incoming: [inviteTeam], outgoing: [] } : { incoming: [], outgoing: [] },
+      invites: inviteTeam
+        ? { incoming: [inviteTeam], outgoing: [] }
+        : { incoming: [], outgoing: [] },
       team: null,
       teamId: null,
       discord: {},
@@ -144,7 +135,7 @@ export async function GET(req) {
     }
 
     // Firebase custom token
-    const customToken = await auth.createCustomToken(firebaseUID);
+    const customToken = await adminAuth().createCustomToken(firebaseUID);
 
     // Редиректим на /steam-login c токеном + steamId (+inviteTeam)
     const redirectUrl = new URL('/steam-login', origin);
@@ -155,6 +146,6 @@ export async function GET(req) {
     return NextResponse.redirect(redirectUrl.toString(), { status: 302 });
   } catch (err) {
     console.error('Steam return handler error:', err);
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error', details: String(err?.message || err) }, { status: 500 });
   }
 }

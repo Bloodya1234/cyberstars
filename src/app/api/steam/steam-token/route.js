@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req) {
   try {
     const { steamId } = await req.json();
+
     if (!steamId) {
       return new Response(JSON.stringify({ error: 'Missing steamId' }), {
         status: 400,
@@ -14,7 +15,10 @@ export async function POST(req) {
       });
     }
 
+    // Приводим к UID формата steam:XXXXXXXXXXXXXXX
     const uid = steamId.startsWith('steam:') ? steamId : `steam:${steamId}`;
+
+    // Генерируем кастомный токен через единый Admin SDK
     const token = await adminAuth().createCustomToken(uid);
 
     return new Response(JSON.stringify({ token }), {
@@ -23,7 +27,7 @@ export async function POST(req) {
     });
   } catch (error) {
     console.error('Error creating custom token:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error.message || 'Internal Server Error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
