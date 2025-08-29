@@ -2,12 +2,17 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+
+// подключаем твой реальный бот-логика модуль
 import {
   sendInviteDM,
   sendAutoServerInvite,
   isUserInGuild,
   ensureBotLoggedIn,
   client,
+  createTeamChannel,
+  updateTeamChannelPermissions,
+  deleteTeamChannel,
 } from '../src/bot/bot.js';
 
 dotenv.config();
@@ -16,162 +21,112 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
-// ✅ Manual invite for a specific team
+// Проверка живости
+app.get('/', (_req, res) => {
+  res.json({ ok: true, service: 'discord-bot' });
+});
+
+// Отправка лички
 app.post('/send-dm', async (req, res) => {
-  const { discordId, message } = req.body;
-  console.log('📨 Received DM request for Discord ID:', discordId);
-
   try {
+    const { discordId, message } = req.body || {};
+    if (!discordId || !message) {
+      return res.status(400).json({ error: 'Missing discordId or message' });
+    }
     await sendInviteDM(discordId, message);
-    console.log(`✅ Successfully sent DM to ${discordId}`);
-    res.status(200).json({ success: true });
+    res.json({ success: true });
   } catch (err) {
-    console.error('❌ Bot failed to send DM:', err);
-    res.status(500).json({
-      error: 'Failed to send invite',
-      details: err.message || 'Unknown error',
-    });
+    console.error('send-dm error:', err);
+    res.status(500).json({ error: 'Failed to send DM', details: err?.message });
   }
 });
-// ✅ Bulk DM sender for lobby assignment
-app.post('/send-dm-batch', async (req, res) => {
-  const { tournamentName, lobbyName, lobbyPassword, players } = req.body;
 
-  if (!Array.isArray(players)) {
-    return res.status(400).json({ error: 'Missing or invalid players array' });
-  }
-
-  const results = [];
-
-  for (const player of players) {
-    if (!player?.discordId) continue;
-
-    const msg = `🎮 Your match for **${tournamentName}** is ready!\n\n🧩 Lobby Name: \`${lobbyName}\`\n🔐 Password: \`${lobbyPassword}\``;
-
-    try {
-      await sendInviteDM(player.discordId, msg);
-      console.log(`✅ DM sent to ${player.username || player.discordId}`);
-      results.push({ user: player.username || player.discordId, success: true });
-    } catch (err) {
-      console.error(`❌ Failed to send DM to ${player.username || player.discordId}:`, err.message);
-      results.push({ user: player.username || player.discordId, success: false, error: err.message });
-    }
-  }
-
-  return res.status(200).json({
-    success: true,
-    count: results.length,
-    details: results,
-  });
-});
-
-
-// ✅ Auto-invite when user logs in
+// Авто-инвайт на сервер
 app.post('/auto-invite', async (req, res) => {
-  const { discordId } = req.body;
-
-  if (!discordId) {
-    return res.status(400).json({ error: 'Missing discordId' });
-  }
-
   try {
-    const alreadyInServer = await isUserInGuild(discordId);
-    if (!alreadyInServer) {
+    const { discordId } = req.body || {};
+    if (!discordId) return res.status(400).json({ error: 'Missing discordId' });
+
+    const inGuild = await isUserInGuild(discordId);
+    if (!inGuild) {
       await sendAutoServerInvite(discordId);
-      return res.status(200).json({ invited: true });
-    } else {
-      return res.status(200).json({ invited: false, reason: 'User already in server' });
+      return res.json({ invited: true });
     }
+    return res.json({ invited: false, reason: 'already_in_guild' });
   } catch (err) {
-    console.error('❌ Auto-invite error:', err);
-    return res.status(500).json({ error: 'Failed to auto-invite user' });
+    console.error('auto-invite error:', err);
+    res.status(500).json({ error: 'Failed to auto-invite', details: err?.message });
   }
 });
 
-// ✅ Check if user is in the server
+// Проверка членства
 app.post('/check-server-membership', async (req, res) => {
-  const { discordId } = req.body;
+  try {
+    const { discordId } = req.body || {};
+    if (!discordId) return res.status(400).json({ error: 'Missing discordId' });
 
-  if (!discordId) {
-    return res.status(400).json({ error: 'Missing discordId' });
+    await ensureBotLoggedIn();
+    const inGuild = await isUserInGuild(discordId);
+    res.json({ isMember: inGuild });
+  } catch (err) {
+    console.error('check membership error:', err);
+    res.status(500).json({ error: 'Internal error' });
   }
+});
 
+// Каналы команды
+app.post('/team/create-channel', async (req, res) => {
+  try {
+    const { teamName, memberDiscordIds, discordId } = req.body || {};
+    if (!teamName || !Array.isArray(memberDiscordIds) || !discordId) {
+      return res.status(400).json({ error: 'Missing teamName, memberDiscordIds or discordId' });
+    }
+    const channelUrl = await createTeamChannel(teamName, memberDiscordIds);
+    await sendInviteDM(discordId, `📺 Your private team channel is ready!\n\n🔗 ${channelUrl}`);
+    res.json({ success: true, channelUrl });
+  } catch (err) {
+    console.error('create-channel error:', err);
+    res.status(500).json({ error: 'Channel creation failed', details: err?.message });
+  }
+});
+
+app.post('/team/update-channel', async (req, res) => {
+  try {
+    const { channelId, memberDiscordIds } = req.body || {};
+    if (!channelId || !Array.isArray(memberDiscordIds)) {
+      return res.status(400).json({ error: 'Missing channelId or memberDiscordIds' });
+    }
+    await updateTeamChannelPermissions(channelId, memberDiscordIds);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('update-channel error:', err);
+    res.status(500).json({ error: 'Channel update failed', details: err?.message });
+  }
+});
+
+app.post('/team/delete-channel', async (req, res) => {
+  try {
+    const { channelId } = req.body || {};
+    if (!channelId) return res.status(400).json({ error: 'Missing channelId' });
+    await deleteTeamChannel(channelId);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('delete-channel error:', err);
+    res.status(500).json({ error: 'Channel deletion failed', details: err?.message });
+  }
+});
+
+// Запуск
+app.listen(PORT, async () => {
   try {
     await ensureBotLoggedIn();
-    const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID);
-    const member = await guild.members.fetch(discordId).catch(() => null);
-
-    if (member) {
-      return res.json({ isMember: true });
-    } else {
-      return res.json({ isMember: false });
-    }
-  } catch (err) {
-    console.error('❌ Membership check failed:', err);
-    return res.status(500).json({ error: 'Internal error' });
-  }
+  } catch {}
+  console.log(`🚀 Discord bot server listening on :${PORT}`);
 });
 
-// ✅ Start the bot server
-app.listen(PORT, () => {
-  console.log(`🚀 Discord bot server running at http://localhost:${PORT}`);
-});
-
-import {
-  createTeamChannel,
-  updateTeamChannelPermissions,
-  deleteTeamChannel,
-} from '../src/bot/bot.js';
-
-// 🔧 Create a team channel
-app.post('/team/create-channel', async (req, res) => {
-  const { teamName, memberDiscordIds, discordId } = req.body;
-  if (!teamName || !Array.isArray(memberDiscordIds) || !discordId) {
-    return res.status(400).json({ error: 'Missing teamName, memberDiscordIds, or discordId' });
-  }
-
-  try {
-    const channelUrl = await createTeamChannel(teamName, memberDiscordIds);
-
-    await sendInviteDM(discordId, `📺 Your private team channel is ready!\n\n🔗 ${channelUrl}`);
-
-    return res.status(200).json({ success: true, channelUrl });
-  } catch (err) {
-    console.error('❌ Failed to create team channel:', err);
-    return res.status(500).json({ error: 'Channel creation failed' });
-  }
-});
-
-// 🔄 Update permissions
-app.post('/team/update-channel', async (req, res) => {
-  const { channelId, memberDiscordIds } = req.body;
-  if (!channelId || !Array.isArray(memberDiscordIds)) {
-    return res.status(400).json({ error: 'Missing channelId or memberDiscordIds' });
-  }
-
-  try {
-    await updateTeamChannelPermissions(channelId, memberDiscordIds);
-    return res.status(200).json({ success: true });
-  } catch (err) {
-    console.error('❌ Failed to update team channel:', err);
-    return res.status(500).json({ error: 'Channel update failed' });
-  }
-});
-
-// 🗑️ Delete channel
-app.post('/team/delete-channel', async (req, res) => {
-  const { channelId } = req.body;
-  if (!channelId) {
-    return res.status(400).json({ error: 'Missing channelId' });
-  }
-
-  try {
-    await deleteTeamChannel(channelId);
-    return res.status(200).json({ success: true });
-  } catch (err) {
-    console.error('❌ Failed to delete team channel:', err);
-    return res.status(500).json({ error: 'Channel deletion failed' });
-  }
+// На всякий
+client.on('ready', () => {
+  console.log(`🤖 Logged in as ${client.user?.tag}`);
 });
