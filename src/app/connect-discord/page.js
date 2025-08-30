@@ -6,12 +6,15 @@ import { useRouter } from 'next/navigation';
 
 export default function ConnectDiscordPage() {
   const router = useRouter();
-  const [steamId, setSteamId] = useState(null);   // steamId64 без префикса
-  const [uid, setUid] = useState(null);           // firebase uid вида steam:...
-  const [token, setToken] = useState(null);       // кастом-токен для state (опционально)
+
+  const [uid, setUid] = useState(null);        // firebase uid (steam:7656...)
+  const [steamId64, setSteamId64] = useState(null);
+  const [token, setToken] = useState(null);    // кастомный токен (опционально для state)
   const [loading, setLoading] = useState(true);
+  const [needsLogin, setNeedsLogin] = useState(false);
   const [errorText, setErrorText] = useState('');
 
+  // Проверяем сессию по cookie
   useEffect(() => {
     let cancelled = false;
 
@@ -20,15 +23,14 @@ export default function ConnectDiscordPage() {
         setLoading(true);
         setErrorText('');
 
-        // 1) кто я по session cookie?
-        const meRes = await fetch('/api/user-info', { credentials: 'include' });
-        if (!meRes.ok) {
-          setErrorText('Missing Steam session. Please login with Steam again.');
+        const res = await fetch('/api/user-info', { credentials: 'include' });
+        if (!res.ok) {
+          setNeedsLogin(true);
           return;
         }
-        const me = await meRes.json(); // ожидаем { uid: 'steam:7656...' }
+        const me = await res.json(); // { uid: 'steam:...', ... }
         if (!me?.uid || typeof me.uid !== 'string') {
-          setErrorText('Session is invalid. Please login with Steam again.');
+          setNeedsLogin(true);
           return;
         }
 
@@ -36,22 +38,24 @@ export default function ConnectDiscordPage() {
 
         setUid(me.uid);
         const id64 = me.uid.startsWith('steam:') ? me.uid.slice('steam:'.length) : me.uid;
-        setSteamId(id64);
+        setSteamId64(id64);
 
-        // 2) свежий custom token (для state — не обязателен)
-        const tokRes = await fetch('/api/steam/steam-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ steamId: id64 }),
-        });
-        if (tokRes.ok) {
-          const { token: t } = await tokRes.json();
-          if (!cancelled) setToken(t || null);
-        }
+        // Получим одноразовый кастомный токен (не обязателен, но полезен)
+        try {
+          const tokRes = await fetch('/api/steam/steam-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ steamId: id64 }),
+          });
+          if (tokRes.ok) {
+            const { token: t } = await tokRes.json();
+            if (!cancelled) setToken(t || null);
+          }
+        } catch {}
       } catch (e) {
         console.error(e);
-        if (!cancelled) setErrorText('Unexpected error. Please login again.');
+        if (!cancelled) setErrorText('Unexpected error. Please try again.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -60,36 +64,31 @@ export default function ConnectDiscordPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const handleSteamLogin = useCallback(() => {
-    router.push('/login');
-  }, [router]);
-
   const handleConnectDiscord = useCallback(() => {
-    // Нет Steam-сессии? Отправляем логиниться
-    if (!uid || !steamId) {
-      handleSteamLogin();
+    // Если нет сессии — сначала логинимся через Steam, затем вернемся сюда
+    if (needsLogin || !uid) {
+      router.push('/login?next=/connect-discord');
       return;
     }
 
-    const stateObj = { steamId: `steam:${steamId}` };
+    // Формируем state
+    const stateObj = { steamId: `steam:${steamId64}` };
     if (token) stateObj.token = token;
     const state = btoa(JSON.stringify(stateObj));
 
+    // redirect_uri берём из текущего origin
+    const redirectUri = `${window.location.origin}/api/discord/callback`;
     const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
-    // Мы используем стабильный серверный callback, но пусть клиентская тоже будет как запасной вариант
-    const redirectUri =
-      process.env.NEXT_PUBLIC_DISCORD_REDIRECT_URI ||
-      `${window.location.origin}/api/discord/callback`;
 
-    const discordAuthUrl =
+    const url =
       `https://discord.com/oauth2/authorize` +
       `?client_id=${encodeURIComponent(clientId)}` +
       `&redirect_uri=${encodeURIComponent(redirectUri)}` +
       `&response_type=code&scope=identify` +
       `&state=${encodeURIComponent(state)}`;
 
-    window.location.href = discordAuthUrl;
-  }, [uid, steamId, token, handleSteamLogin]);
+    window.location.href = url;
+  }, [needsLogin, uid, steamId64, token, router]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-10 text-center">
@@ -102,27 +101,19 @@ export default function ConnectDiscordPage() {
         <div className="opacity-80">Checking session…</div>
       ) : (
         <>
+          {needsLogin && (
+            <div className="text-yellow-400 mb-4">
+              Missing Steam session. You’ll be asked to login before connecting Discord.
+            </div>
+          )}
           {errorText && <div className="text-red-400 mb-4">{errorText}</div>}
 
-          <div className="flex gap-3">
-            <button
-              onClick={handleConnectDiscord}
-              className="px-6 py-3 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
-              // раньше было disabled={!uid} — из-за этого кнопку нельзя было нажать
-              disabled={loading}
-            >
-              Connect Discord
-            </button>
-
-            {!uid && (
-              <button
-                onClick={handleSteamLogin}
-                className="px-6 py-3 bg-gray-700 text-white rounded hover:bg-gray-800"
-              >
-                Login with Steam
-              </button>
-            )}
-          </div>
+          <button
+            onClick={handleConnectDiscord}
+            className="px-6 py-3 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+          >
+            Connect Discord
+          </button>
 
           {uid && (
             <div className="mt-3 text-sm opacity-70">
