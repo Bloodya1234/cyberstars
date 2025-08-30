@@ -7,14 +7,14 @@ import { useRouter } from 'next/navigation';
 export default function ConnectDiscordPage() {
   const router = useRouter();
 
-  const [uid, setUid] = useState(null);        // firebase uid (steam:7656...)
+  const [uid, setUid] = useState(null);        // firebase uid: steam:7656...
   const [steamId64, setSteamId64] = useState(null);
-  const [token, setToken] = useState(null);    // кастомный токен (опционально для state)
+  const [token, setToken] = useState(null);    // кастомный токен (для state; опционально)
   const [loading, setLoading] = useState(true);
   const [needsLogin, setNeedsLogin] = useState(false);
   const [errorText, setErrorText] = useState('');
 
-  // Проверяем сессию по cookie
+  // Проверяем серверную сессию по httpOnly-cookie
   useEffect(() => {
     let cancelled = false;
 
@@ -28,7 +28,8 @@ export default function ConnectDiscordPage() {
           setNeedsLogin(true);
           return;
         }
-        const me = await res.json(); // { uid: 'steam:...', ... }
+
+        const me = await res.json(); // ожидаем { uid: 'steam:...' }
         if (!me?.uid || typeof me.uid !== 'string') {
           setNeedsLogin(true);
           return;
@@ -40,7 +41,7 @@ export default function ConnectDiscordPage() {
         const id64 = me.uid.startsWith('steam:') ? me.uid.slice('steam:'.length) : me.uid;
         setSteamId64(id64);
 
-        // Получим одноразовый кастомный токен (не обязателен, но полезен)
+        // пробуем получить разовый custom token — не критично, если не получится
         try {
           const tokRes = await fetch('/api/steam/steam-token', {
             method: 'POST',
@@ -52,7 +53,7 @@ export default function ConnectDiscordPage() {
             const { token: t } = await tokRes.json();
             if (!cancelled) setToken(t || null);
           }
-        } catch {}
+        } catch {/* ignore */}
       } catch (e) {
         console.error(e);
         if (!cancelled) setErrorText('Unexpected error. Please try again.');
@@ -65,20 +66,27 @@ export default function ConnectDiscordPage() {
   }, []);
 
   const handleConnectDiscord = useCallback(() => {
-    // Если нет сессии — сначала логинимся через Steam, затем вернемся сюда
+    // Если нет сессии Steam — отправляем на логин и возвращаемся назад
     if (needsLogin || !uid) {
       router.push('/login?next=/connect-discord');
       return;
     }
 
-    // Формируем state
+    // state для callback-а
     const stateObj = { steamId: `steam:${steamId64}` };
     if (token) stateObj.token = token;
     const state = btoa(JSON.stringify(stateObj));
 
-    // redirect_uri берём из текущего origin
+    // redirect_uri строим от текущего origin,
+    // clientId берём из PUBLIC-переменной окружения
     const redirectUri = `${window.location.origin}/api/discord/callback`;
-    const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
+    const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || '';
+
+    if (!clientId) {
+      console.error('NEXT_PUBLIC_DISCORD_CLIENT_ID is missing!');
+      alert('Discord Client ID is not configured on this deployment.');
+      return;
+    }
 
     const url =
       `https://discord.com/oauth2/authorize` +
@@ -87,6 +95,7 @@ export default function ConnectDiscordPage() {
       `&response_type=code&scope=identify` +
       `&state=${encodeURIComponent(state)}`;
 
+    console.log('🔗 Redirecting to Discord:', url);
     window.location.href = url;
   }, [needsLogin, uid, steamId64, token, router]);
 
@@ -103,7 +112,7 @@ export default function ConnectDiscordPage() {
         <>
           {needsLogin && (
             <div className="text-yellow-400 mb-4">
-              Missing Steam session. You’ll be asked to login before connecting Discord.
+              You&apos;ll be asked to login with Steam first.
             </div>
           )}
           {errorText && <div className="text-red-400 mb-4">{errorText}</div>}
