@@ -1,9 +1,6 @@
 // src/app/admin-login/page.js
 'use client';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
 import { useEffect, useState } from 'react';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/firebase';
@@ -14,7 +11,7 @@ export default function AdminLoginPage() {
   const [err, setErr] = useState('');
 
   useEffect(() => {
-    // Ничего не делаем на сервере — страница клиентская.
+    // Ничего не делаем на сервере — страница полностью клиентская
   }, []);
 
   const onSubmit = async (e) => {
@@ -38,7 +35,7 @@ export default function AdminLoginPage() {
           type="email"
           placeholder="Email"
           value={email}
-          onChange={(e)=>setEmail(e.target.value)}
+          onChange={(e) => setEmail(e.target.value)}
           required
         />
         <input
@@ -46,11 +43,14 @@ export default function AdminLoginPage() {
           type="password"
           placeholder="Password"
           value={pass}
-          onChange={(e)=>setPass(e.target.value)}
+          onChange={(e) => setPass(e.target.value)}
           required
         />
         {err && <div className="text-red-500 text-sm">{err}</div>}
-        <button className="w-full bg-blue-600 text-white p-2 rounded" type="submit">
+        <button
+          className="w-full bg-blue-600 text-white p-2 rounded"
+          type="submit"
+        >
           Sign in
         </button>
       </form>
