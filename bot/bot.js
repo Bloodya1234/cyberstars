@@ -1,6 +1,5 @@
-import dotenv from 'dotenv';
-dotenv.config(); // Load .env variables
-
+// bot/bot.js
+import 'dotenv/config';
 import {
   Client,
   GatewayIntentBits,
@@ -9,49 +8,59 @@ import {
   ChannelType,
 } from 'discord.js';
 
-const client = new Client({
+// Инициализация клиента Discord
+export const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.DirectMessages,
-    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMembers,   // для проверки членства
+    GatewayIntentBits.DirectMessages, // для отправки DM
   ],
-  partials: [Partials.Channel],
+  partials: [Partials.Channel],       // чтобы DM-каналы работали
 });
 
 let botStarted = false;
 
-// ✅ Ensure bot is logged in
-async function ensureBotLoggedIn() {
-  if (!botStarted) {
-    try {
-      await client.login(process.env.DISCORD_BOT_TOKEN);
-      console.log('✅ Bot logged in');
-      botStarted = true;
-    } catch (err) {
-      console.error('❌ Failed to log in bot:', err);
-      throw err;
-    }
+/** Гарантируем логин бота (лениво, один раз) */
+export async function ensureBotLoggedIn() {
+  if (botStarted) return;
+
+  const token = process.env.DISCORD_BOT_TOKEN;
+  if (!token) {
+    throw new Error('DISCORD_BOT_TOKEN is missing (env var not found).');
+  }
+
+  try {
+    await client.login(token);
+    botStarted = true;
+    console.log('✅ Bot logged in');
+  } catch (err) {
+    console.error('❌ Failed to log in bot:', err);
+    throw err;
   }
 }
 
-// ✅ Send a DM to a user
+/** Отправка личного сообщения пользователю */
 export async function sendInviteDM(discordId, messageText) {
   await ensureBotLoggedIn();
   try {
     const user = await client.users.fetch(discordId);
     if (!user) throw new Error('User not found');
     await user.send(messageText);
-    console.log(`📩 DM sent to ${user.tag}`);
+    console.log(`📩 DM sent to ${user.tag || discordId}`);
   } catch (err) {
     console.error(`❌ Failed to send DM to ${discordId}:`, err);
     throw err;
   }
 }
 
-// ✅ Check if a user is already in the server
+/** Проверка, состоит ли пользователь в гильдии */
 export async function isUserInGuild(discordId) {
   await ensureBotLoggedIn();
-  const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID);
+
+  const guildId = process.env.DISCORD_GUILD_ID;
+  if (!guildId) throw new Error('DISCORD_GUILD_ID env is missing');
+
+  const guild = await client.guilds.fetch(guildId);
   try {
     await guild.members.fetch(discordId);
     return true;
@@ -60,41 +69,49 @@ export async function isUserInGuild(discordId) {
   }
 }
 
-// ✅ Auto-invite user if not in server
+/** Авто-инвайт на сервер через одноразовую ссылку в DM */
 export async function sendAutoServerInvite(discordId) {
   await ensureBotLoggedIn();
 
-  const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID);
-  const channel = await guild.channels.fetch(process.env.DISCORD_INVITE_CHANNEL_ID);
+  const guildId = process.env.DISCORD_GUILD_ID;
+  const inviteChannelId = process.env.DISCORD_INVITE_CHANNEL_ID;
+  if (!guildId || !inviteChannelId) {
+    throw new Error('DISCORD_GUILD_ID or DISCORD_INVITE_CHANNEL_ID is missing');
+  }
+
+  const guild = await client.guilds.fetch(guildId);
+  const channel = await guild.channels.fetch(inviteChannelId);
 
   const invite = await channel.createInvite({
     maxUses: 1,
     unique: true,
-    maxAge: 86400, // 1 day
+    maxAge: 86400, // 1 день
     reason: `Auto invite for ${discordId}`,
   });
 
   const user = await client.users.fetch(discordId);
   const message = `📨 You are invited to the server **${guild.name}**.\n\n🔗 ${invite.url}`;
   await user.send(message);
-  console.log(`📨 Auto-invite sent to ${user.tag}`);
+  console.log(`📨 Auto-invite sent to ${user.tag || discordId}`);
 }
 
-// ✅ Create private text channel for a team
+/** Создать приватный командный канал */
 export async function createTeamChannel(teamName, memberDiscordIds) {
   await ensureBotLoggedIn();
 
-  const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID);
-  await guild.roles.fetch(); // Ensure roles are loaded into cache
-const everyone = guild.roles.cache.get(guild.id);
-if (!everyone) throw new Error('Unable to retrieve @everyone role');
+  const guildId = process.env.DISCORD_GUILD_ID;
+  if (!guildId) throw new Error('DISCORD_GUILD_ID env is missing');
 
+  const guild = await client.guilds.fetch(guildId);
+  await guild.roles.fetch(); // прогреваем кэш ролей
+  const everyone = guild.roles.cache.get(guild.id);
+  if (!everyone) throw new Error('Unable to retrieve @everyone role');
 
   const botUser = client.user;
 
-  // ✅ Only include users already in the server
+  // Разрешаем доступ только тем, кто уже в сервере
   const validMembers = [];
-  for (const id of memberDiscordIds) {
+  for (const id of memberDiscordIds || []) {
     try {
       const member = await guild.members.fetch(id);
       if (member) validMembers.push(id);
@@ -108,29 +125,23 @@ if (!everyone) throw new Error('Unable to retrieve @everyone role');
       id: everyone.id,
       deny: [PermissionsBitField.Flags.ViewChannel],
     },
-   {
-  id: botUser.id, // ← the actual bot user ID
-  allow: [
-    PermissionsBitField.Flags.ViewChannel,
-    PermissionsBitField.Flags.SendMessages,
-    PermissionsBitField.Flags.ManageChannels,
-    PermissionsBitField.Flags.ManageRoles,
-  ],
-},
-
-    ...validMembers.map(id => ({
+    {
+      id: botUser.id,
+      allow: [
+        PermissionsBitField.Flags.ViewChannel,
+        PermissionsBitField.Flags.SendMessages,
+        PermissionsBitField.Flags.ManageChannels,
+        PermissionsBitField.Flags.ManageRoles,
+      ],
+    },
+    ...validMembers.map((id) => ({
       id,
-      allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages],
+      allow: [
+        PermissionsBitField.Flags.ViewChannel,
+        PermissionsBitField.Flags.SendMessages,
+      ],
     })),
   ];
-console.log(
-  '🔐 Permissions to set:',
-  JSON.stringify(permissionOverwrites, (_, v) =>
-    typeof v === 'bigint' ? v.toString() : v,
-    2
-  )
-);
-
 
   const channel = await guild.channels.create({
     name: teamName.toLowerCase().replace(/\s+/g, '-'),
@@ -140,24 +151,27 @@ console.log(
   });
 
   console.log(`📺 Created channel ${channel.name} with ID ${channel.id}`);
-  const channelUrl = `https://discord.gg/zeU7RPskKg${guild.id}/${channel.id}`;
-return channelUrl;
+  return `https://discord.com/channels/${guild.id}/${channel.id}`;
 }
 
-// ✅ Update channel permissions for current team members
+/** Обновить права канала под текущих участников */
 export async function updateTeamChannelPermissions(channelId, memberDiscordIds) {
   await ensureBotLoggedIn();
 
+  const guildId = process.env.DISCORD_GUILD_ID;
+  if (!guildId) throw new Error('DISCORD_GUILD_ID env is missing');
+
   const channel = await client.channels.fetch(channelId);
-  const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID);
+  const guild = await client.guilds.fetch(guildId);
+  await guild.roles.fetch();
   const everyone = guild.roles.cache.get(guild.id);
   const botUser = client.user;
 
   if (!channel || !everyone) throw new Error('Channel or @everyone role not found');
 
-  // ✅ Only include users already in the server
+  // Оставляем только тех, кто в сервере
   const validMembers = [];
-  for (const id of memberDiscordIds) {
+  for (const id of memberDiscordIds || []) {
     try {
       const member = await guild.members.fetch(id);
       if (member) validMembers.push(id);
@@ -180,16 +194,19 @@ export async function updateTeamChannelPermissions(channelId, memberDiscordIds) 
         PermissionsBitField.Flags.ManageRoles,
       ],
     },
-    ...validMembers.map(id => ({
+    ...validMembers.map((id) => ({
       id,
-      allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages],
+      allow: [
+        PermissionsBitField.Flags.ViewChannel,
+        PermissionsBitField.Flags.SendMessages,
+      ],
     })),
   ]);
 
   console.log(`🔄 Updated permissions for channel ${channel.id}`);
 }
 
-// ✅ Delete the team channel
+/** Удалить командный канал */
 export async function deleteTeamChannel(channelId) {
   await ensureBotLoggedIn();
   const channel = await client.channels.fetch(channelId).catch(() => null);
@@ -199,13 +216,11 @@ export async function deleteTeamChannel(channelId) {
   }
 }
 
-export {
-  ensureBotLoggedIn,
-  client,
-};
+// Логи при готовности
 client.on('ready', () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
-  console.log('📋 Servers this bot is in:');
-  client.guilds.cache.forEach(guild => console.log(`- ${guild.name} (${guild.id})`));
+  console.log('📋 Servers:');
+  client.guilds.cache.forEach((g) =>
+    console.log(`- ${g.name} (${g.id})`)
+  );
 });
-

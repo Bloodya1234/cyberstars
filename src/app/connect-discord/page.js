@@ -4,34 +4,31 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
-const PUBLIC_BASE =
-  process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/+$/,'') || 'https://cyberstars.vercel.app'; // <— твой прод домен
-
 export default function ConnectDiscordPage() {
   const router = useRouter();
-  const [steamId, setSteamId] = useState(null);
-  const [uid, setUid] = useState(null);
-  const [token, setToken] = useState(null);
+  const [steamId, setSteamId] = useState(null);   // steamId64 без префикса
+  const [uid, setUid] = useState(null);           // firebase uid вида steam:...
+  const [token, setToken] = useState(null);       // кастом-токен для state (опционально)
   const [loading, setLoading] = useState(true);
   const [errorText, setErrorText] = useState('');
 
   useEffect(() => {
     let cancelled = false;
+
     (async () => {
       try {
         setLoading(true);
         setErrorText('');
 
+        // 1) кто я по session cookie?
         const meRes = await fetch('/api/user-info', { credentials: 'include' });
         if (!meRes.ok) {
           setErrorText('Missing Steam session. Please login with Steam again.');
-          setLoading(false);
           return;
         }
-        const me = await meRes.json();
-        if (!me?.uid) {
+        const me = await meRes.json(); // ожидаем { uid: 'steam:7656...' }
+        if (!me?.uid || typeof me.uid !== 'string') {
           setErrorText('Session is invalid. Please login with Steam again.');
-          setLoading(false);
           return;
         }
 
@@ -41,6 +38,7 @@ export default function ConnectDiscordPage() {
         const id64 = me.uid.startsWith('steam:') ? me.uid.slice('steam:'.length) : me.uid;
         setSteamId(id64);
 
+        // 2) свежий custom token (для state — не обязателен)
         const tokRes = await fetch('/api/steam/steam-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -67,6 +65,7 @@ export default function ConnectDiscordPage() {
   }, [router]);
 
   const handleConnectDiscord = useCallback(() => {
+    // Нет Steam-сессии? Отправляем логиниться
     if (!uid || !steamId) {
       handleSteamLogin();
       return;
@@ -77,7 +76,10 @@ export default function ConnectDiscordPage() {
     const state = btoa(JSON.stringify(stateObj));
 
     const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
-    const redirectUri = `${PUBLIC_BASE}/api/discord/callback`; // <— ЕДИНЫЙ callback
+    // Мы используем стабильный серверный callback, но пусть клиентская тоже будет как запасной вариант
+    const redirectUri =
+      process.env.NEXT_PUBLIC_DISCORD_REDIRECT_URI ||
+      `${window.location.origin}/api/discord/callback`;
 
     const discordAuthUrl =
       `https://discord.com/oauth2/authorize` +
@@ -106,7 +108,8 @@ export default function ConnectDiscordPage() {
             <button
               onClick={handleConnectDiscord}
               className="px-6 py-3 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
-              disabled={!uid}
+              // раньше было disabled={!uid} — из-за этого кнопку нельзя было нажать
+              disabled={loading}
             >
               Connect Discord
             </button>
@@ -131,15 +134,3 @@ export default function ConnectDiscordPage() {
     </div>
   );
 }
-const manualInvite = process.env.NEXT_PUBLIC_DISCORD_INVITE_URL;
-
-{manualInvite && (
-  <a
-    href={manualInvite}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="text-cyan-400 underline"
-  >
-    Click here to join manually
-  </a>
-)}
