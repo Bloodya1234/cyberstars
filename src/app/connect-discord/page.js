@@ -131,3 +131,15 @@ export default function ConnectDiscordPage() {
     </div>
   );
 }
+const manualInvite = process.env.NEXT_PUBLIC_DISCORD_INVITE_URL;
+
+{manualInvite && (
+  <a
+    href={manualInvite}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-cyan-400 underline"
+  >
+    Click here to join manually
+  </a>
+)}

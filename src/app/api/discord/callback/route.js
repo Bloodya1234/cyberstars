@@ -1,21 +1,16 @@
 // src/app/api/discord/callback/route.js
-import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
-
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const BASE =
-  process.env.BASE_URL?.replace(/\/+$/,'') ||
-  process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/+$/,'') ||
-  'https://cyberstars.vercel.app'; // <— тот же прод домен
+import { NextResponse } from 'next/server';
+import { getDb } from '@/lib/firebase-admin'; // ← ленивый доступ к Firestore
 
 export async function GET(req) {
   const url = new URL(req.url);
-  const origin = BASE; // принудительно один домен
+  const origin = url.origin;
+
   const code = url.searchParams.get('code');
   const stateEncoded = url.searchParams.get('state');
-
   if (!code || !stateEncoded) {
     return NextResponse.json({ error: 'Missing code or state' }, { status: 400 });
   }
@@ -24,21 +19,20 @@ export async function GET(req) {
   try {
     const stateObj = JSON.parse(Buffer.from(stateEncoded, 'base64').toString('utf8'));
     steamId = stateObj.steamId;
-    token = stateObj.token; // может отсутствовать — это ок
+    token = stateObj.token; // token нам не критичен, но пусть будет
     if (!steamId) throw new Error('Missing steamId in state');
   } catch (err) {
     return NextResponse.json({ error: 'Invalid state', message: err.message }, { status: 400 });
   }
 
   try {
-    const redirectUri = `${origin}/api/discord/callback`; // ДОЛЖЕН совпадать с authorize
-
+    // 1) Обмен кода на access_token
     const params = new URLSearchParams({
       client_id: process.env.DISCORD_CLIENT_ID,
       client_secret: process.env.DISCORD_CLIENT_SECRET,
       grant_type: 'authorization_code',
       code,
-      redirect_uri: redirectUri,
+      redirect_uri: `${origin}/api/discord/callback`, // стабильный redirect
     });
 
     const discordRes = await fetch('https://discord.com/api/oauth2/token', {
@@ -47,11 +41,11 @@ export async function GET(req) {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     });
     const discordData = await discordRes.json();
-
     if (!discordRes.ok || !discordData.access_token) {
       return NextResponse.json({ error: 'Token exchange failed', details: discordData }, { status: 500 });
     }
 
+    // 2) /users/@me
     const userRes = await fetch('https://discord.com/api/users/@me', {
       headers: { Authorization: `Bearer ${discordData.access_token}` },
     });
@@ -67,7 +61,9 @@ export async function GET(req) {
 
     const docId = steamId.startsWith('steam:') ? steamId : `steam:${steamId}`;
 
-    await db.collection('users').doc(docId).set(
+    // 3) Сохраняем в Firestore (лениво берём db)
+    const db = getDb();
+    await db().collection('users').doc(docId).set(
       {
         discord: {
           id: discordUser.id,
@@ -79,22 +75,10 @@ export async function GET(req) {
       { merge: true }
     );
 
+    // 4) (необязательно) Пингуем бот-сервер
     try {
       const botUrl = process.env.BOT_SERVER_URL;
       if (botUrl) {
         await fetch(`${botUrl}/auto-invite`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ discordId: discordUser.id }),
-        }).catch(() => {});
-      }
-    } catch {}
-
-    return NextResponse.redirect(`${origin}/profile`);
-  } catch (err) {
-    return NextResponse.json(
-      { error: 'Discord OAuth failed', message: err.message },
-      { status: 500 }
-    );
-  }
-}
+          headers: { 'Content-Type': '

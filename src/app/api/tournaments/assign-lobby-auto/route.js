@@ -1,4 +1,4 @@
-import { db } from '@/lib/firebase-admin';
+import { getDb } from '@/lib/firebase-admin';
 import { getAuthSession } from '@/lib/auth';
 
 export async function POST(req) {
@@ -11,7 +11,7 @@ export async function POST(req) {
       return new Response(JSON.stringify({ message: 'Unauthorized' }), { status: 403 });
     }
 
-    const userSnap = await db.collection('users').doc(session.user.uid).get();
+    const userSnap = await db().collection('users').doc(session.user.uid).get();
     const user = userSnap.data();
 
     if (!user || user.role !== 'admin') {
@@ -25,7 +25,7 @@ export async function POST(req) {
       return new Response(JSON.stringify({ message: 'Missing required fields' }), { status: 400 });
     }
 
-    const tournamentRef = db.collection('tournaments').doc(tournamentId);
+    const tournamentRef = db().collection('tournaments').doc(tournamentId);
     const tournamentSnap = await tournamentRef.get();
 
     if (!tournamentSnap.exists) {

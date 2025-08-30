@@ -1,5 +1,5 @@
 // src/app/api/user-info/route.js
-import { db } from '@/lib/firebase-admin';
+import { getDb } from '@/lib/firebase-admin';
 import { getAuthSession } from '@/lib/auth';
 
 export const runtime = 'nodejs';
@@ -18,7 +18,7 @@ export async function GET() {
     }
 
     const uid = session.user.uid; // "steam:7656..."
-    const snap = await db.collection('users').doc(uid).get();
+    const snap = await db().collection('users').doc(uid).get();
 
     if (!snap.exists) {
       console.warn('[user-info] User doc not found for UID:', uid);

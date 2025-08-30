@@ -1,4 +1,4 @@
-import { db } from '@/lib/firebase-admin';
+import { getDb } from '@/lib/firebase-admin';
 import fetch from 'node-fetch';
 
 const FRESHNESS_THRESHOLD_MS = 3 * 60 * 60 * 1000; // 3 hours
@@ -8,7 +8,7 @@ export async function GET(req, { params }) {
   if (!uid) return new Response('Missing UID', { status: 400 });
 
   try {
-    const userRef = db.collection('users').doc(uid);
+    const userRef = db().collection('users').doc(uid);
     const userSnap = await userRef.get();
 
     if (!userSnap.exists) return new Response('User not found', { status: 404 });

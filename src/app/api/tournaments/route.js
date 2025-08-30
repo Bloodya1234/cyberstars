@@ -1,8 +1,8 @@
-import { db } from '@/lib/firebase-admin';
+import { getDb } from '@/lib/firebase-admin';
 
 export async function GET() {
   try {
-    const snapshot = await db.collection('tournaments').get();
+    const snapshot = await db().collection('tournaments').get();
     const tournaments = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),

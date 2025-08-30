@@ -1,5 +1,5 @@
 import { DISCORD_ADMIN_WEBHOOK } from '@/lib/config';
-import { db } from '@/lib/firebase-admin';
+import { getDb } from '@/lib/firebase-admin';
 import { getAuthSession } from '@/lib/auth';
 import { FieldValue } from 'firebase-admin/firestore';
 
@@ -89,14 +89,14 @@ export async function POST(req) {
     }
 
     const { tournamentId } = await req.json();
-    const tournamentRef = db.collection('tournaments').doc(tournamentId);
+    const tournamentRef = db().collection('tournaments').doc(tournamentId);
     const tournamentSnap = await tournamentRef.get();
     if (!tournamentSnap.exists) {
       return new Response(JSON.stringify({ message: 'Tournament not found' }), { status: 404 });
     }
 
     const tournament = tournamentSnap.data();
-    const userRef = db.collection('users').doc(uid);
+    const userRef = db().collection('users').doc(uid);
     const userSnap = await userRef.get();
     if (!userSnap.exists) {
       return new Response(JSON.stringify({ message: 'User not found' }), { status: 404 });
@@ -161,7 +161,7 @@ export async function POST(req) {
     return new Response(JSON.stringify({ message: 'You must be in a team to join this tournament' }), { status: 400 });
   }
 
-  const teamRef = db.collection('teams').doc(user.teamId);
+  const teamRef = db().collection('teams').doc(user.teamId);
   const teamSnap = await teamRef.get();
   if (!teamSnap.exists) {
     return new Response(JSON.stringify({ message: 'Team not found' }), { status: 404 });

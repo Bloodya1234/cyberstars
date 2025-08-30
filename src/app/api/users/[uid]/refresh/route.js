@@ -1,4 +1,4 @@
-import { db } from '@/lib/firebase-admin';
+import { getDb } from '@/lib/firebase-admin';
 import { fetchOpenDotaStats } from '@/lib/opendota';
 
 export async function GET(req, { params }) {
@@ -6,7 +6,7 @@ export async function GET(req, { params }) {
   if (!uid) return new Response('Missing UID', { status: 400 });
 
   try {
-    const userRef = db.collection('users').doc(uid);
+    const userRef = db().collection('users').doc(uid);
     const userSnap = await userRef.get();
     if (!userSnap.exists) return new Response('User not found', { status: 404 });
 

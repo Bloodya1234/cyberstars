@@ -98,7 +98,7 @@ export async function GET(req) {
 
     // Создаём/обновляем пользователя в Firestore
     const inviteTeam = sp.get('inviteTeam') || '';
-    const userRef = db.collection('users').doc(firebaseUID);
+    const userRef = db().collection('users').doc(firebaseUID);
     const snap = await userRef.get();
 
     const baseUser = {

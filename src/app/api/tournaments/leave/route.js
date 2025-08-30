@@ -1,5 +1,5 @@
 // ✅ FILE: /app/api/tournaments/leave/route.js
-import { db } from '@/lib/firebase-admin';
+import { getDb } from '@/lib/firebase-admin';
 import { getAuthSession } from '@/lib/auth';
 
 export async function POST(req) {
@@ -14,7 +14,7 @@ export async function POST(req) {
       return new Response(JSON.stringify({ message: 'Missing tournament ID' }), { status: 400 });
     }
 
-    const tournamentRef = db.collection('tournaments').doc(tournamentId);
+    const tournamentRef = db().collection('tournaments').doc(tournamentId);
     const snapshot = await tournamentRef.get();
     if (!snapshot.exists) {
       return new Response(JSON.stringify({ message: 'Tournament not found' }), { status: 404 });

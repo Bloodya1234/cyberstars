@@ -1,4 +1,4 @@
-import { db } from '@/lib/firebase-admin';
+import { getDb } from '@/lib/firebase-admin';
 import { getAuthSession } from '@/lib/auth';
 
 export async function POST(req) {
@@ -8,7 +8,7 @@ export async function POST(req) {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    const userSnap = await db.collection('users').doc(session.user.uid).get();
+    const userSnap = await db().collection('users').doc(session.user.uid).get();
     if (!userSnap.exists) {
       return new Response('User not found', { status: 404 });
     }
@@ -28,7 +28,7 @@ export async function POST(req) {
     const numericSlots = Number(maxSlots);
     const format = numericSlots === 2 ? 'single' : 'bracket';
 
-    await db.collection('tournaments').add({
+    await db().collection('tournaments').add({
       name,
       type,
       bracket,

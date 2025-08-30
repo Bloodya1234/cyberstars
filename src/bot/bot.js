@@ -140,7 +140,7 @@ console.log(
   });
 
   console.log(`📺 Created channel ${channel.name} with ID ${channel.id}`);
-  const channelUrl = `https://discord.com/channels/${guild.id}/${channel.id}`;
+  const channelUrl = `https://discord.gg/zeU7RPskKg${guild.id}/${channel.id}`;
 return channelUrl;
 }
 

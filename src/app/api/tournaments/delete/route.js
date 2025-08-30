@@ -1,4 +1,4 @@
-import { db } from '@/lib/firebase-admin';
+import { getDb } from '@/lib/firebase-admin';
 import { getAuthSession } from '@/lib/auth';
 
 export async function DELETE(req) {
@@ -13,7 +13,7 @@ export async function DELETE(req) {
 
     console.log('✅ Session verified:', session.user.uid);
 
-    const userSnap = await db.collection('users').doc(session.user.uid).get();
+    const userSnap = await db().collection('users').doc(session.user.uid).get();
     if (!userSnap.exists) {
       console.warn('⛔ User not found in Firestore');
       return new Response('User not found', { status: 404 });
@@ -34,7 +34,7 @@ export async function DELETE(req) {
       return new Response('Missing tournament ID', { status: 400 });
     }
 
-    await db.collection('tournaments').doc(id).delete();
+    await db().collection('tournaments').doc(id).delete();
     console.log('✅ Deleted tournament:', id);
 
     return new Response(JSON.stringify({ success: true }), { status: 200 });

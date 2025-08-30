@@ -1,11 +1,11 @@
 // ✅ FILE: /src/app/api/tournaments/[id]/route.js
-import { db } from '@/lib/firebase-admin';
+import { getDb } from '@/lib/firebase-admin';
 
 export async function GET(req, context) {
   const id = context.params?.id;
 
   try {
-    const tournamentRef = db.collection('tournaments').doc(id);
+    const tournamentRef = db().collection('tournaments').doc(id);
     const snapshot = await tournamentRef.get();
 
     if (!snapshot.exists) {
