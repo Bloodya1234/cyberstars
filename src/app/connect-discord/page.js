@@ -8,73 +8,64 @@ export default function ConnectDiscordPage() {
   const [token, setToken] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  // паблик-ид приложения в Discord
   const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || '';
+  // фиксированный базовый домен
+  const base = (process.env.NEXT_PUBLIC_BASE_URL || window.location.origin).replace(/\/$/, '');
 
-  // Подтягиваем текущую Steam-сессию (не блокирует кнопку)
+  // тихо пытаемся подтянуть сессию Steam (не обязательно)
   useEffect(() => {
     let cancelled = false;
-
     (async () => {
       try {
         const res = await fetch('/api/user-info', { credentials: 'include' });
         if (!res.ok) return;
-
-        const me = await res.json(); // ожидаем { uid: 'steam:7656...' }
-        if (!me?.uid || typeof me.uid !== 'string') return;
-
+        const me = await res.json(); // { uid: 'steam:7656...' }
+        if (!me?.uid) return;
         const id64 = me.uid.startsWith('steam:') ? me.uid.slice(6) : me.uid;
         if (!cancelled) setSteamId64(id64);
 
-        // Одноразовый custom token (опционально)
-        const tr = await fetch('/api/steam/steam-token', {
+        const tok = await fetch('/api/steam/steam-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({ steamId: id64 }),
         });
-        if (tr.ok && !cancelled) {
-          const { token: t } = await tr.json();
-          setToken(t || null);
+        if (tok.ok && !cancelled) {
+          const { token } = await tok.json();
+          setToken(token || null);
         }
-      } catch {
-        /* молча продолжаем — коннект без state тоже возможен */
-      }
+      } catch {}
     })();
-
     return () => { cancelled = true; };
   }, []);
 
   const handleConnectDiscord = useCallback(() => {
     if (!clientId) {
-      alert('Discord Client ID отсутствует. Установите NEXT_PUBLIC_DISCORD_CLIENT_ID.');
+      alert('Discord client id is missing. Set NEXT_PUBLIC_DISCORD_CLIENT_ID.');
       return;
     }
     setBusy(true);
 
-    // ✅ Стабильный redirect_uri с учётом прод-домена
-    const base = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
     const redirectUri = `${base}/api/discord/callback`;
 
-    // Собираем state (если есть данные)
     const stateObj = {};
     if (steamId64) stateObj.steamId = `steam:${steamId64}`;
     if (token) stateObj.token = token;
 
-    const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      response_type: 'code',
-      scope: 'identify',
-    });
+    const state =
+      Object.keys(stateObj).length
+        ? `&state=${encodeURIComponent(btoa(JSON.stringify(stateObj)))}`
+        : '';
 
-    if (Object.keys(stateObj).length) {
-      params.set('state', btoa(JSON.stringify(stateObj)));
-    }
+    const url =
+      `https://discord.com/oauth2/authorize` +
+      `?client_id=${encodeURIComponent(clientId)}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&response_type=code&scope=identify` +
+      state;
 
-    // Отправляем на Discord OAuth
-    window.location.assign(`https://discord.com/oauth2/authorize?${params.toString()}`);
-  }, [clientId, steamId64, token]);
+    window.location.href = url;
+  }, [clientId, base, steamId64, token]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-10 text-center">
@@ -82,7 +73,6 @@ export default function ConnectDiscordPage() {
       <p className="text-lg opacity-80 mb-6">
         Connect your Discord account to receive invites to teams and tournaments.
       </p>
-
       <button
         onClick={handleConnectDiscord}
         disabled={!clientId || busy}
