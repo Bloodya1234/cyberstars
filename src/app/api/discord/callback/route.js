@@ -4,92 +4,57 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
-
-function normalizeBase(u) {
-  return (u || '').replace(/\/+$/, '');
-}
+import { getAuthSession } from '@/lib/auth'; // если есть; иначе убери эту строку и блок сессии
 
 export async function GET(req) {
   try {
     const url = new URL(req.url);
     const origin = url.origin;
 
-    // 0) Строим redirect_uri, который ДОЛЖЕН совпадать со строкой в DDP
-    //    Приоритет: DISCORD_REDIRECT_URI -> BASE_URL -> NEXT_PUBLIC_BASE_URL -> origin
-    const base =
-      normalizeBase(process.env.BASE_URL) ||
-      normalizeBase(process.env.NEXT_PUBLIC_BASE_URL) ||
-      normalizeBase(origin);
+    const base = (process.env.NEXT_PUBLIC_BASE_URL || origin).replace(/\/+$/, '');
+    const redirectUri = `${base}/api/discord/callback`;
 
-    const redirectUri =
-      process.env.DISCORD_REDIRECT_URI
-        ? normalizeBase(process.env.DISCORD_REDIRECT_URI) // уже полный путь до /api/discord/callback
-        : `${base}/api/discord/callback`;
-
-    // 1) Параметры из запроса
     const code = url.searchParams.get('code');
     const stateEncoded = url.searchParams.get('state');
-
-    if (!code) {
-      return NextResponse.json({ error: 'Missing code' }, { status: 400 });
+    if (!code || !stateEncoded) {
+      return NextResponse.json({ error: 'Missing code or state' }, { status: 400 });
     }
 
-    // state мы ждём (из фронта), но дадим понятную ошибку, если он отсутствует/битый
-    let steamId = null;
-    let passedToken = null;
-    if (!stateEncoded) {
-      return NextResponse.json({ error: 'Missing state' }, { status: 400 });
-    }
+    // --- читаем state, но НЕ требуем обязательный steamId ---
+    let stateObj = {};
     try {
-      const stateObj = JSON.parse(Buffer.from(stateEncoded, 'base64').toString('utf8'));
-      steamId = stateObj?.steamId || null;       // ожидаем вида 'steam:7656...'
-      passedToken = stateObj?.token ?? null;     // можем не использовать
-      if (!steamId) throw new Error('steamId is missing in state');
+      stateObj = JSON.parse(Buffer.from(stateEncoded, 'base64').toString('utf8')) || {};
     } catch (e) {
-      return NextResponse.json(
-        { error: 'Invalid state', message: String(e?.message || e) },
-        { status: 400 }
-      );
+      // некритично — просто оставим пустой объект
     }
+    let steamId = typeof stateObj.steamId === 'string' ? stateObj.steamId : null;
 
-    // 2) Обмен кода на access_token
+    // 1) Обмен кода на токен
     const params = new URLSearchParams({
       client_id: process.env.DISCORD_CLIENT_ID || '',
       client_secret: process.env.DISCORD_CLIENT_SECRET || '',
       grant_type: 'authorization_code',
       code,
-      redirect_uri: redirectUri, // ← ДОЛЖЕН совпадать с тем, что был в authorize
+      redirect_uri: redirectUri,
     });
 
     const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params, // можно передавать URLSearchParams напрямую
+      body: params,
     });
-
-    const tokenJson = await tokenRes.json().catch(() => ({}));
-    if (!tokenRes.ok || !tokenJson?.access_token) {
-      return NextResponse.json(
-        {
-          error: 'Token exchange failed',
-          details: tokenJson,
-          hint: 'Check DISCORD_REDIRECT_URI / Redirects in DDP match exactly',
-        },
-        { status: 500 }
-      );
+    const tokenJson = await tokenRes.json();
+    if (!tokenRes.ok || !tokenJson.access_token) {
+      return NextResponse.json({ error: 'Token exchange failed', details: tokenJson }, { status: 500 });
     }
 
-    // 3) Профиль пользователя из Discord
+    // 2) Профиль пользователя Discord
     const meRes = await fetch('https://discord.com/api/users/@me', {
       headers: { Authorization: `Bearer ${tokenJson.access_token}` },
     });
-    const discordUser = await meRes.json().catch(() => ({}));
-
+    const discordUser = await meRes.json();
     if (!discordUser?.id || !discordUser?.username) {
-      return NextResponse.json(
-        { error: 'Invalid Discord user response', details: discordUser },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Invalid Discord user response', details: discordUser }, { status: 500 });
     }
 
     const discordTag =
@@ -97,9 +62,29 @@ export async function GET(req) {
         ? `${discordUser.username}#${discordUser.discriminator}`
         : discordUser.username;
 
-    const docId = steamId.startsWith('steam:') ? steamId : `steam:${steamId}`;
+    // 3) Если steamId не пришёл в state — попробуем достать его из текущей сессии
+    if (!steamId) {
+      try {
+        const session = await getAuthSession();
+        const uid = session?.user?.uid;
+        if (uid && typeof uid === 'string') {
+          steamId = uid.startsWith('steam:') ? uid : `steam:${uid}`;
+        }
+      } catch {}
+    }
 
-    // 4) Сохраняем связку в Firestore
+    // 4) Готовим ID документа: если steamId есть — пишем в users/<steam:...>,
+    // иначе — пишем в users/discord:<discordId> и помечаем, что нужно связать со Steam позже
+    let docId;
+    let needsSteamLink = false;
+    if (steamId) {
+      docId = steamId.startsWith('steam:') ? steamId : `steam:${steamId}`;
+    } else {
+      docId = `discord:${discordUser.id}`;
+      needsSteamLink = true;
+    }
+
+    // 5) Сохраняем / мержим
     await db().collection('users').doc(docId).set(
       {
         discord: {
@@ -108,25 +93,28 @@ export async function GET(req) {
           avatar: discordUser.avatar ?? null,
         },
         joinedDiscordServer: false,
-        // можно сохранить отметку времени / passedToken при желании
+        ...(needsSteamLink ? { needsSteamLink: true } : {}),
       },
       { merge: true }
     );
 
-    // 5) Пингуем бот-сервис (best-effort)
+    // 6) Пингуем бот-сервис (не критично)
     try {
-      const botUrl = normalizeBase(process.env.BOT_SERVER_URL);
+      const botUrl = process.env.BOT_SERVER_URL?.replace(/\/+$/, '');
       if (botUrl) {
         await fetch(`${botUrl}/auto-invite`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ discordId: discordUser.id }),
-        }).catch(() => {});
+        });
       }
-    } catch (_) {}
+    } catch (e) {
+      console.warn('Bot invite ping failed:', e);
+    }
 
-    // 6) Редиректим на профиль
-    return NextResponse.redirect(`${base}/profile`);
+    // 7) Редиректим на профиль
+    const redirectTo = needsSteamLink ? `${base}/profile?needsSteamLink=1` : `${base}/profile`;
+    return NextResponse.redirect(redirectTo);
   } catch (err) {
     console.error('Discord OAuth failed:', err);
     return NextResponse.json(
