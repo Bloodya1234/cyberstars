@@ -14,27 +14,17 @@ export default function SteamLoginClient() {
 
     (async () => {
       try {
-        // Токен и steamId могут прийти в query (после /api/steam/return)
-        // или лежать в sessionStorage (для совместимости со старым потоком)
-        const fromQS = {
-          token: sp.get('token') || '',
-          steamId: sp.get('steamId') || '',
-        };
-
-        let token = fromQS.token;
-        let steamId = fromQS.steamId;
-
-        if (typeof window !== 'undefined') {
-          if (!token) token = sessionStorage.getItem('token') || '';
-          if (!steamId) steamId = sessionStorage.getItem('steamId') || '';
-        }
+        // 1) Токен/steamId из query или sessionStorage
+        const ss = typeof window !== 'undefined' ? window.sessionStorage : null;
+        let token = sp.get('token') || (ss ? ss.getItem('token') : '');
+        let steamId = sp.get('steamId') || (ss ? ss.getItem('steamId') : '');
 
         if (!token) {
           router.replace('/login');
           return;
         }
 
-        // 1) Логинимся в Firebase на клиенте
+        // 2) Логин в Firebase по кастомному токену
         const auth = getAuth(app);
         const cred = await signInWithCustomToken(auth, token);
         if (!cred?.user) {
@@ -42,7 +32,7 @@ export default function SteamLoginClient() {
           return;
         }
 
-        // 2) Получаем свежий idToken и просим сервер поставить session cookie
+        // 3) Обмениваем idToken на session cookie
         const idToken = await cred.user.getIdToken(true);
         const resp = await fetch('/api/sessionLogin', {
           method: 'POST',
@@ -50,37 +40,39 @@ export default function SteamLoginClient() {
           body: JSON.stringify({ token: idToken }),
           credentials: 'include',
         });
-
         if (!resp.ok) {
           router.replace('/login');
           return;
         }
 
-        // 3) Узнаём состояние пользователя
-        const u = await fetch('/api/user-info', { credentials: 'include' });
-        if (!u.ok) {
+        // 4) Узнаём состояние пользователя
+        const uRes = await fetch('/api/user-info', { credentials: 'include', cache: 'no-store' });
+        if (!uRes.ok) {
           router.replace('/login');
           return;
         }
-        const me = await u.json();
+        const me = await uRes.json();
 
-        // Если Discord ещё не привязан — отправляем коннектить
+        // 5) Если Discord не привязан — отправляем коннектить
         if (!me?.discord?.id) {
           router.replace('/connect-discord');
           return;
         }
 
-        // Если привязан — проверяем членство на сервере
-        const chk = await fetch(`/api/discord/check?discordId=${me.discord.id}`, { cache: 'no-store' });
+        // 6) Если привязан — проверяем членство на сервере Discord
+        const chk = await fetch(`/api/discord/check?discordId=${encodeURIComponent(me.discord.id)}`, {
+          cache: 'no-store',
+        });
+
         if (chk.ok) {
           const j = await chk.json();
-          if (j.isMember) {
+          if (j?.isMember) {
             router.replace('/profile');
             return;
           }
         }
 
-        // Привязан, но ещё не вступил — ведём на страницу с приглашением
+        // Привязан, но не вступил — ведём на страницу приглашения
         router.replace('/join-discord');
       } catch (e) {
         console.error('steam-login error:', e);
@@ -89,7 +81,7 @@ export default function SteamLoginClient() {
     })();
 
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
