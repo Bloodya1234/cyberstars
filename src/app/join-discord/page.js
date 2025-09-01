@@ -4,67 +4,79 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-/**
- * Страница приглашает в Discord и параллельно пингует /api/discord/check.
- * Как только видим, что юзер уже в сервере — сразу перекидываем на /profile.
- */
 export default function JoinDiscordPage() {
   const router = useRouter();
   const [checking, setChecking] = useState(false);
-  const [lastResult, setLastResult] = useState(null);
-  const inviteUrl = process.env.NEXT_PUBLIC_DISCORD_INVITE_URL; // <- обычный инвайт discord.gg/...
-
+  const [error, setError] = useState('');
   const timerRef = useRef(null);
 
-  async function checkNow() {
+  const inviteUrl =
+    process.env.NEXT_PUBLIC_DISCORD_INVITE_URL ||
+    'https://discord.com'; // подставь свою постоянную ссылку-приглашение
+
+  // Функция опроса сервера
+  const poll = async () => {
     try {
       setChecking(true);
-      const r = await fetch('/api/discord/check', { credentials: 'include' });
-      const data = await r.json().catch(() => ({}));
-      setLastResult({ status: r.status, data });
+      setError('');
 
-      if (r.ok && data?.ok && data?.isMember) {
+      // НЕ передаём discordId — сервер сам найдёт по сессии/Firestore
+      const res = await fetch('/api/discord/check', { cache: 'no-store', credentials: 'include' });
+      if (!res.ok) {
+        // если нет привязки или нет сессии — отправим человека под привязку/логин
+        if (res.status === 401) return router.replace('/login');
+        if (res.status === 409) return router.replace('/connect-discord');
+
+        const text = await res.text();
+        setError(text || 'Check failed');
+        return;
+      }
+
+      const data = await res.json();
+      if (data?.isMember) {
         router.replace('/profile');
+        return;
       }
     } catch (e) {
-      setLastResult({ status: 0, data: { error: String(e?.message || e) } });
+      setError(String(e?.message || e));
     } finally {
       setChecking(false);
     }
-  }
+  };
 
+  // Первый запрос и последующий поллинг
   useEffect(() => {
-    // мгновенно проверим один раз
-    checkNow();
+    poll(); // сразу проверим один раз
 
-    // потом — автоповтор каждые 4 секунды
-    timerRef.current = setInterval(checkNow, 4000);
-    return () => clearInterval(timerRef.current);
+    timerRef.current = setInterval(poll, 5000); // затем каждые 5 сек
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
-      <h1 className="text-5xl font-extrabold mb-6">Join our Discord</h1>
-      <p className="text-xl opacity-80 mb-8">
+    <div className="min-h-screen flex flex-col items-center justify-center gap-6 text-center px-6">
+      <h1 className="text-5xl font-extrabold">Join our Discord</h1>
+
+      <p className="opacity-80">
         You must join our Discord server to use the platform.
       </p>
 
       <a
-        href={inviteUrl || '#'}
+        href={inviteUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="px-6 py-3 rounded bg-cyan-500/30 ring-2 ring-cyan-400 hover:bg-cyan-500/40"
+        className="inline-block px-6 py-3 rounded bg-cyan-500 text-black font-semibold hover:opacity-90"
       >
         Join Discord Server
       </a>
 
-      <div className="mt-6 text-sm opacity-70">
-        {checking ? 'Checking your membership…' : 'Waiting for your join…'}
+      <div className="opacity-70 text-sm">
+        {checking ? 'Waiting for your join…' : 'We check every 5s automatically.'}
       </div>
 
-      {/* В отладочных целях можно показать последний ответ */}
-      {/* <pre className="mt-4 text-xs opacity-60">{JSON.stringify(lastResult, null, 2)}</pre> */}
+      {error && <div className="text-red-400 text-sm max-w-xl break-words">{error}</div>}
     </div>
   );
 }
