@@ -3,104 +3,72 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
-import { getAuthSession } from '@/lib/auth';
 
-/**
- * Проверяет членство в Discord-гильдии.
- * discordId берём из query (?discordId=) или из Firestore пользователя по сессии.
- * Возвращаем подробные ошибки, чтобы видеть, где именно ломается.
- */
-export async function GET(req) {
-  const url = new URL(req.url);
-  const wantDebug = url.searchParams.get('debug') === '1';
-
+// безопасный fetch с тайм-аутом
+async function timedFetch(url, opts = {}, timeoutMs = 9000) {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), timeoutMs);
   try {
-    // -------- 0) sanity env
+    // важно выключить кеш
+    const res = await fetch(url, { ...opts, signal: ac.signal, cache: 'no-store' });
+    return res;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+export async function GET(req) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const discordId = searchParams.get('discordId');
+
+    if (!discordId) {
+      // не считаем это ошибкой — просто нечего проверять
+      return NextResponse.json({ isMember: false, reason: 'missing_discordId' }, { status: 200 });
+    }
+
     const botUrl = process.env.BOT_SERVER_URL?.replace(/\/+$/, '');
     if (!botUrl) {
-      return NextResponse.json(
-        { error: 'BOT_SERVER_URL is not set on the server' },
-        { status: 500 }
-      );
+      // если бот не настроен — тоже не ломаемся
+      return NextResponse.json({ isMember: false, reason: 'no_bot_url' }, { status: 200 });
     }
 
-    // -------- 1) session
-    const session = await getAuthSession();
-    const uid = session?.user?.uid;
-    if (!uid) {
-      return NextResponse.json({ error: 'Unauthorized (no session)' }, { status: 401 });
-    }
-
-    // -------- 2) discordId (query or firestore)
-    let discordId = url.searchParams.get('discordId');
-    if (!discordId) {
-      const snap = await db().collection('users').doc(uid).get();
-      if (!snap.exists) {
-        return NextResponse.json({ error: `User doc not found for ${uid}` }, { status: 404 });
-      }
-      const user = snap.data() || {};
-      discordId = user?.discord?.id || null;
-      if (!discordId) {
-        return NextResponse.json(
-          { error: 'Discord not linked in Firestore (users/{uid}.discord.id missing)' },
-          { status: 409 }
-        );
-      }
-    }
-
-    // -------- 3) call bot server with timeout
-    const controller = new AbortController();
-    const to = setTimeout(() => controller.abort(), 8000);
-
-    let botResp;
+    // дергаем бота — у бота должен быть эндпоинт /check-server-membership
+    // тело запроса — { discordId }
+    let botRes;
     try {
-      botResp = await fetch(`${botUrl}/check-server-membership`, {
+      botRes = await timedFetch(`${botUrl}/check-server-membership`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ discordId }),
-        signal: controller.signal,
-        cache: 'no-store',
-      });
-    } finally {
-      clearTimeout(to);
-    }
-
-    const botBodyText = await botResp.text().catch(() => '');
-    let botBody;
-    try {
-      botBody = JSON.parse(botBodyText);
-    } catch {
-      botBody = botBodyText;
-    }
-
-    if (!botResp.ok) {
+      }, 9000); // 9 сек: хватит даже на холодный старт Render
+    } catch (e) {
+      // Тайм-аут/abort/сеть. Не роняем — возвращаем false и продолжаем polling.
       return NextResponse.json(
-        {
-          error: 'Bot responded with non-200',
-          botStatus: botResp.status,
-          botBody,
-        },
-        { status: 502 }
+        { isMember: false, reason: 'bot_timeout', details: String(e?.message || e) },
+        { status: 200 }
       );
     }
 
-    const isMember = !!(botBody && typeof botBody.isMember === 'boolean' ? botBody.isMember : false);
+    // Пытаемся прочитать JSON бота
+    let json = {};
+    try { json = await botRes.json(); } catch {}
 
-    // -------- 4) save flag (best effort)
-    try {
-      await db().collection('users').doc(uid).set({ joinedDiscordServer: isMember }, { merge: true });
-    } catch (e) {
-      // не критично
-      if (wantDebug) console.warn('save joinedDiscordServer failed:', e);
+    // Если бот ответил 200 и дал поле isMember — доверяем
+    if (botRes.ok && typeof json.isMember === 'boolean') {
+      return NextResponse.json({ isMember: json.isMember }, { status: 200 });
     }
 
-    return NextResponse.json({ isMember, debug: wantDebug ? { discordId, botBody } : undefined }, { status: 200 });
-  } catch (err) {
-    console.error('[/api/discord/check] fatal:', err);
+    // Иначе считаем "пока не член", не ломая UX
     return NextResponse.json(
-      { error: 'Internal Server Error', details: String(err?.message || err) },
-      { status: 500 }
+      { isMember: false, reason: 'bot_bad_response', details: json },
+      { status: 200 }
+    );
+  } catch (err) {
+    // На всякий: никогда не 500 — чтобы UI не пугался
+    return NextResponse.json(
+      { isMember: false, reason: 'server_error', details: String(err?.message || err) },
+      { status: 200 }
     );
   }
 }
