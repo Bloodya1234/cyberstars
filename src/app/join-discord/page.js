@@ -1,16 +1,15 @@
 // src/app/join-discord/page.js
 'use client';
 
+import Link from 'next/link';
 import { useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function JoinDiscordPage() {
-  const router = useRouter();
-
-  // инвайт берём из ENV
+  // Берём инвайт из ENV; если забыли https:// — добавим
   const inviteUrl = useMemo(() => {
-    const v = process.env.NEXT_PUBLIC_DISCORD_INVITE_URL?.trim();
-    return v && !v.startsWith('http') ? `https://${v}` : v || '';
+    const raw = (process.env.NEXT_PUBLIC_DISCORD_INVITE_URL || '').trim();
+    if (!raw) return '';
+    return raw.startsWith('http') ? raw : `https://${raw}`;
   }, []);
 
   return (
@@ -22,28 +21,31 @@ export default function JoinDiscordPage() {
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-4">
+      {/* Кнопки РЯДОМ; на маленьких экранах аккуратно переносятся */}
+      <div className="flex flex-row flex-wrap items-center justify-center gap-4">
         {inviteUrl ? (
           <a
             href={inviteUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-6 py-3 rounded bg-cyan-500 text-black font-semibold hover:bg-cyan-400"
+            className="px-6 py-3 rounded bg-cyan-500 text-black font-semibold hover:bg-cyan-400 inline-flex items-center justify-center"
           >
             Join Discord Server
           </a>
         ) : (
-          <div className="px-6 py-3 rounded bg-gray-700 text-white">
+          <span className="px-6 py-3 rounded bg-gray-700 text-white">
             Invite link is not configured
-          </div>
+          </span>
         )}
 
-        <button
-          onClick={() => router.replace('/profile')}
-          className="px-6 py-3 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-500"
+        {/* НАДЁЖНЫЙ переход без JS через Link */}
+        <Link
+          href="/profile"
+          prefetch={false}
+          className="px-6 py-3 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-500 inline-flex items-center justify-center"
         >
           Go to Profile
-        </button>
+        </Link>
       </div>
 
       {inviteUrl && (
