@@ -3,7 +3,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
-import { db, adminAuth } from '@/lib/firebase-admin';
+import { getDb, getAdminAuth } from '@/lib/firebase-admin';
 
 // helper
 function steam64To32(steam64) {
@@ -26,7 +26,7 @@ function extractSteamId64FromClaimedId(claimedId) {
 export async function GET(req) {
   try {
     const url = new URL(req.url);
-    const origin = url.origin; // важен точный origin (прод/preview)
+    const origin = url.origin;
     const sp = url.searchParams;
 
     // базовые проверки
@@ -36,7 +36,7 @@ export async function GET(req) {
       return NextResponse.json({ error: 'Invalid OpenID response' }, { status: 400 });
     }
 
-    // Составляем ПОЛНЫЙ набор openid.* обратно и меняем режим на check_authentication
+    // Вернём все openid.* и попросим check_authentication
     const verifyParams = new URLSearchParams();
     for (const [k, v] of sp.entries()) {
       if (k.startsWith('openid.')) verifyParams.append(k, v);
@@ -49,7 +49,6 @@ export async function GET(req) {
       body: verifyParams.toString(),
     });
     const verifyText = await verifyRes.text();
-
     const isValid = verifyRes.ok && verifyText.includes('is_valid:true');
     if (!isValid) {
       console.error('Steam OpenID verify response:', verifyText);
@@ -96,9 +95,10 @@ export async function GET(req) {
       console.warn('OpenDota heroes fetch failed');
     }
 
-    // Создаём/обновляем пользователя в Firestore
+    // Firestore
+    const db = getDb();
     const inviteTeam = sp.get('inviteTeam') || '';
-    const userRef = db().collection('users').doc(firebaseUID);
+    const userRef = db.collection('users').doc(firebaseUID);
     const snap = await userRef.get();
 
     const baseUser = {
@@ -135,7 +135,8 @@ export async function GET(req) {
     }
 
     // Firebase custom token
-    const customToken = await adminAuth().createCustomToken(firebaseUID);
+    const auth = getAdminAuth();
+    const customToken = await auth.createCustomToken(firebaseUID);
 
     // Редиректим на /steam-login c токеном + steamId (+inviteTeam)
     const redirectUrl = new URL('/steam-login', origin);

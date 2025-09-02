@@ -1,62 +1,35 @@
 // src/app/api/sessionLogin/route.js
-import { cookies } from 'next/headers';
-import { adminAuth } from '@/lib/firebase-admin';
-
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+import { NextResponse } from 'next/server';
+import { getAdminAuth } from '@/lib/firebase-admin';
+
 export async function POST(req) {
   try {
-    const { token: idToken } = await req.json();
+    const { token } = await req.json(); // idToken от клиента
+    if (!token) return NextResponse.json({ error: 'Missing token' }, { status: 400 });
 
-    if (!idToken) {
-      return new Response(JSON.stringify({ error: 'Missing idToken' }), {
-        status: 400, headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    const auth = getAdminAuth();
 
-    // 1) Попробуем сначала верифицировать токен — это даст нормальную ошибку
-    let decoded;
-    try {
-      decoded = await adminAuth().verifyIdToken(idToken, true);
-    } catch (e) {
-      console.error('verifyIdToken failed:', e?.errorInfo || e?.message || e);
-      return new Response(JSON.stringify({
-        error: 'verifyIdToken failed',
-        details: e?.errorInfo || e?.message || String(e),
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
-    }
+    // можно проверить, что токен валидный (опционально):
+    const decoded = await auth.verifyIdToken(token);
 
-    // 2) Создаём session cookie
-    const expiresIn = 7 * 24 * 60 * 60 * 1000; // 7 дней
-    let sessionCookie;
-    try {
-      sessionCookie = await adminAuth().createSessionCookie(idToken, { expiresIn });
-    } catch (e) {
-      console.error('createSessionCookie failed:', e?.errorInfo || e?.message || e);
-      return new Response(JSON.stringify({
-        error: 'createSessionCookie failed',
-        uid: decoded?.uid,
-        details: e?.errorInfo || e?.message || String(e),
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
-    }
+    // создаём session cookie (например, на 7 дней)
+    const expiresIn = 7 * 24 * 60 * 60 * 1000;
+    const sessionCookie = await auth.createSessionCookie(token, { expiresIn });
 
-    const cookieStore = await cookies();
-    cookieStore.set('session', sessionCookie, {
-      path: '/',
+    const res = NextResponse.json({ ok: true });
+    res.cookies.set('session', sessionCookie, {
       httpOnly: true,
+      secure: true,
+      path: '/',
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
       maxAge: expiresIn / 1000,
     });
-
-    return new Response(JSON.stringify({ ok: true, uid: decoded?.uid }), {
-      status: 200, headers: { 'Content-Type': 'application/json' },
-    });
-  } catch (err) {
-    console.error('sessionLogin fatal:', err);
-    return new Response(JSON.stringify({
-      error: 'Internal Server Error', details: String(err?.message || err),
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return res;
+  } catch (e) {
+    console.error('sessionLogin error', e);
+    return NextResponse.json({ error: 'sessionLogin failed' }, { status: 500 });
   }
 }
