@@ -1,6 +1,9 @@
 // src/app/api/discord/check/route.js
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin'; // Admin SDK
+import { getDb } from '@/lib/firebase-admin';
 
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
@@ -11,27 +14,23 @@ export async function GET(req) {
     return NextResponse.json({ error: 'Missing discordId' }, { status: 400 });
   }
 
-  try {
-    const resp = await fetch(`${process.env.BOT_SERVER_URL}/check-server-membership`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ discordId }),
-      cache: 'no-store',
-    });
+  const r = await fetch(`${process.env.BOT_SERVER_URL}/check-server-membership`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ discordId }),
+    cache: 'no-store',
+  });
 
-    const data = await resp.json();
+  const data = await r.json();
 
-    // Если юзер реально вступил — сохраним отметку
-    if (data?.isMember && uid) {
-      await db.collection('users').doc(uid).set(
-        { joinedDiscordServer: true },
-        { merge: true }
-      );
-    }
-
-    return NextResponse.json(data);
-  } catch (err) {
-    console.error('discord/check failed:', err);
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+  // если реально вступил — отметим это в users/{uid}
+  if (data?.isMember && uid) {
+    const db = getDb();
+    await db.collection('users').doc(uid).set(
+      { joinedDiscordServer: true },
+      { merge: true }
+    );
   }
+
+  return NextResponse.json(data);
 }

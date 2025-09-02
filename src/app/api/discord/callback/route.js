@@ -3,7 +3,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
+import { getDb } from '@/lib/firebase-admin';
 
 // универсальный fetch с тайм-аутом
 async function timedFetch(url, opts = {}, timeoutMs = 8000) {
@@ -19,11 +19,6 @@ async function timedFetch(url, opts = {}, timeoutMs = 8000) {
 
 export async function GET(req) {
   try {
-    // быстрый ответ на preflight — полезно, если кто-то шлёт OPTIONS
-    if (req.method === 'OPTIONS') {
-      return new NextResponse(null, { status: 204 });
-    }
-
     const url = new URL(req.url);
     const origin = url.origin;
 
@@ -34,12 +29,8 @@ export async function GET(req) {
     const code = url.searchParams.get('code');
     const stateEncoded = url.searchParams.get('state');
 
-    if (!code) {
-      return NextResponse.json({ error: 'Missing code' }, { status: 400 });
-    }
-    if (!stateEncoded) {
-      return NextResponse.json({ error: 'Missing state' }, { status: 400 });
-    }
+    if (!code) return NextResponse.json({ error: 'Missing code' }, { status: 400 });
+    if (!stateEncoded) return NextResponse.json({ error: 'Missing state' }, { status: 400 });
 
     // state: { steamId: 'steam:765...', token?: '...' }
     let steamId, token;
@@ -75,11 +66,11 @@ export async function GET(req) {
     if (!tokenRes.ok || !tokenJson.access_token) {
       return NextResponse.json(
         { error: 'Token exchange failed', details: tokenJson },
-        { status: 502 } // Bad Gateway — внешний сервис
+        { status: 502 }
       );
     }
 
-    // --- 2) Получаем профиль пользователя (тайм-аут 8с) ---
+    // --- 2) Профиль Discord (тайм-аут 8с) ---
     const meRes = await timedFetch('https://discord.com/api/users/@me', {
       headers: { Authorization: `Bearer ${tokenJson.access_token}` },
       cache: 'no-store',
@@ -101,10 +92,10 @@ export async function GET(req) {
 
     const docId = steamId.startsWith('steam:') ? steamId : `steam:${steamId}`;
 
-    // --- 3) Пишем в Firestore (тут тоже делаем «страховку» от зависаний) ---
-    // В админ SDK нет встроенного тайм-аута, поэтому просто ограничим
-    // общую операцию Promise.race'ом.
-    const writePromise = db().collection('users').doc(docId).set(
+    // --- 3) Запись в Firestore (через ленивый getDb) ---
+    const db = getDb();
+
+    const writePromise = db.collection('users').doc(docId).set(
       {
         discord: {
           id: discordUser.id,
@@ -116,6 +107,7 @@ export async function GET(req) {
       { merge: true }
     );
 
+    // Простой тайм-аут на запись (8с), чтобы не висеть бесконечно
     const writeTimeout = new Promise((_, rej) =>
       setTimeout(() => rej(new Error('Firestore write timeout')), 8000)
     );
@@ -123,14 +115,13 @@ export async function GET(req) {
     try {
       await Promise.race([writePromise, writeTimeout]);
     } catch (e) {
-      // Не роняем юзера, но сообщим понятной 502 — чтобы было видно в логах
       return NextResponse.json(
         { error: 'Firestore write failed', message: String(e?.message || e) },
         { status: 502 }
       );
     }
 
-    // --- 4) Пингуем бот-сервис НЕБЛОКИРУЮЩЕ (тайм-аут 1.5с, fire-and-forget) ---
+    // --- 4) Пингуем бот-сервис неблокирующе (1.5с) ---
     try {
       const botUrl = process.env.BOT_SERVER_URL?.replace(/\/+$/, '');
       if (botUrl) {
@@ -151,10 +142,9 @@ export async function GET(req) {
       // игнорируем
     }
 
-    // --- 5) Редиректим на профиль ---
+    // --- 5) Редиректим на join-discord ---
     return NextResponse.redirect(`${base}/join-discord`);
   } catch (err) {
-    // Если произошло что-то неожиданное — лучше вернуть 500, чем ловить 504 от платформы
     console.error('Discord OAuth failed:', err);
     return NextResponse.json(
       { error: 'Discord OAuth failed', message: String(err?.message || err) },
