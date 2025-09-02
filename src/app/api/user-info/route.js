@@ -1,46 +1,28 @@
 // src/app/api/user-info/route.js
+import { NextResponse } from 'next/server';
+import { getAuth } from 'firebase-admin/auth';
 import { db } from '@/lib/firebase-admin';
-import { getAuthSession } from '@/lib/auth';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-
-export async function GET() {
+export async function GET(req) {
   try {
-    // Серверная сессия по cookie "session"
-    const session = await getAuthSession();
-    const uid = session?.user?.uid;               // ожидаем "steam:7656..."
-    if (!uid) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    const cookie = req.cookies.get('session')?.value;
+    if (!cookie) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Читаем документ пользователя
-    const snap = await db().collection('users').doc(uid).get();
-    const data = snap.exists ? (snap.data() || {}) : {};
+    const decoded = await getAuth().verifySessionCookie(cookie, true);
+    const uid = decoded.uid;
 
-    // Формируем ответ (всегда возвращаем discord и joinedDiscordServer)
-    const res = {
+    const snap = await db.collection('users').doc(uid).get();
+    const data = snap.exists ? snap.data() : {};
+
+    return NextResponse.json({
       uid,
-      role: data.role || 'user',
-      discord: data.discord || null, // {id, tag, avatar} | null
-      joinedDiscordServer:
-        typeof data.joinedDiscordServer === 'boolean'
-          ? data.joinedDiscordServer
-          : false,
-    };
-
-    return new Response(JSON.stringify(res), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      discord: data.discord || null,
+      joinedDiscordServer: data.joinedDiscordServer || false,
     });
   } catch (err) {
-    console.error('[user-info] Fatal:', err?.stack || err);
-    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error('user-info failed:', err);
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

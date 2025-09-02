@@ -1,54 +1,106 @@
 // src/app/join-discord/page.js
 'use client';
 
-import Link from 'next/link';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function JoinDiscordPage() {
-  const inviteUrl = useMemo(() => {
-    const raw = (process.env.NEXT_PUBLIC_DISCORD_INVITE_URL || '').trim();
-    if (!raw) return '';
-    return raw.startsWith('http') ? raw : `https://${raw}`;
+  const router = useRouter();
+  const inviteUrl = process.env.NEXT_PUBLIC_DISCORD_INVITE_URL || 'https://discord.gg/yourInvite';
+  const [me, setMe] = useState(null);
+  const [checking, setChecking] = useState(false);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch('/api/user-info', { credentials: 'include', cache: 'no-store' });
+        if (!r.ok) return;
+        const j = await r.json();
+        if (!cancelled) setMe(j);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
   }, []);
 
+  const openInvite = useCallback(() => {
+    window.open(inviteUrl, '_blank', 'noopener,noreferrer');
+  }, [inviteUrl]);
+
+  // Вариант A — мгновенно переводим в профиль после открытия инвайта
+  const openInviteAndGoProfile = useCallback(() => {
+    openInvite();
+    router.replace('/profile'); // сразу уходим на профиль
+  }, [openInvite, router]);
+
+  // Вариант B — polling: ждём подтверждение от бота
+  const openInviteAndWait = useCallback(() => {
+    openInvite();
+    if (!me?.discord?.id) return; // нет id — не ждём
+
+    setChecking(true);
+    let tries = 0;
+    const maxTries = 20; // ~20 * 3с = 60с
+
+    const tick = async () => {
+      tries += 1;
+      try {
+        const params = new URLSearchParams();
+        params.set('discordId', me.discord.id);
+        if (me.uid) params.set('uid', me.uid);
+        const r = await fetch(`/api/discord/check?${params.toString()}`, { cache: 'no-store' });
+        const j = await r.json();
+        if (j?.isMember) {
+          router.replace('/profile');
+          return;
+        }
+      } catch {}
+      if (tries < maxTries) {
+        timerRef.current = setTimeout(tick, 3000);
+      } else {
+        setChecking(false);
+      }
+    };
+
+    tick();
+  }, [me, openInvite, router]);
+
+  useEffect(() => () => clearTimeout(timerRef.current), []);
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-10 text-center gap-8">
-      <div>
-        <h1 className="text-5xl font-extrabold mb-4">Join our Discord</h1>
-        <p className="opacity-80 text-xl">
-          You must join our Discord server to use the platform.
-        </p>
-      </div>
+    <main className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+      <h1 className="text-3xl font-bold mb-3">Join our Discord</h1>
+      <p className="opacity-80 mb-6">
+        Please join the Discord server to finish your setup.
+      </p>
 
-      {/* БОЛЬШАЯ дистанция между кнопками */}
-      <div className="flex flex-row flex-wrap items-center justify-center gap-y-4 gap-x-16">
-        {inviteUrl ? (
-          <a
-            href={inviteUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-6 py-3 rounded bg-cyan-500 text-black font-semibold hover:bg-cyan-400 inline-flex items-center justify-center"
-          >
-            Join Discord Server
-          </a>
-        ) : (
-          <span className="px-6 py-3 rounded bg-gray-700 text-white">
-            Invite link is not configured
-          </span>
-        )}
-
-        <Link
-          href="/profile"
-          prefetch={false}
-          className="px-6 py-3 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-500 inline-flex items-center justify-center"
+      <div className="flex flex-col gap-3">
+        {/* Вариант A — быстро и надёжно */}
+        <button
+          onClick={openInviteAndGoProfile}
+          className="px-6 py-3 rounded bg-indigo-600 text-white hover:bg-indigo-700"
         >
-          Go to Profile
-        </Link>
-      </div>
+          Open Discord Invite & Go to Profile
+        </button>
 
-      {inviteUrl && (
-        <p className="opacity-70 text-sm">The invite opens in a new tab.</p>
-      )}
-    </div>
+        {/* Вариант B — если хочешь ждать подтверждения */}
+        <button
+          onClick={openInviteAndWait}
+          disabled={!me?.discord?.id || checking}
+          className="px-6 py-3 rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+        >
+          {checking ? 'Waiting for membership…' : 'Open Invite & Wait for Check'}
+        </button>
+
+        {/* Ручной переход, если B не дождался */}
+        <button
+          onClick={() => router.replace('/profile')}
+          className="mt-4 px-6 py-3 rounded bg-gray-700 text-white hover:bg-gray-800"
+        >
+          Go to Profile now
+        </button>
+      </div>
+    </main>
   );
 }
