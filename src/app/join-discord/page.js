@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useMemo } from 'react';
 
 export default function JoinDiscordPage() {
-  // Берём инвайт из ENV; если забыли https:// — добавим
   const inviteUrl = useMemo(() => {
     const raw = (process.env.NEXT_PUBLIC_DISCORD_INVITE_URL || '').trim();
     if (!raw) return '';
@@ -21,8 +20,8 @@ export default function JoinDiscordPage() {
         </p>
       </div>
 
-      {/* Кнопки РЯДОМ; на маленьких экранах аккуратно переносятся */}
-      <div className="flex flex-row flex-wrap items-center justify-center gap-4">
+      {/* БОЛЬШАЯ дистанция между кнопками */}
+      <div className="flex flex-row flex-wrap items-center justify-center gap-y-4 gap-x-16">
         {inviteUrl ? (
           <a
             href={inviteUrl}
@@ -38,7 +37,6 @@ export default function JoinDiscordPage() {
           </span>
         )}
 
-        {/* НАДЁЖНЫЙ переход без JS через Link */}
         <Link
           href="/profile"
           prefetch={false}

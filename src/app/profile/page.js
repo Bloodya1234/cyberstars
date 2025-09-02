@@ -1,17 +1,17 @@
-// src/app/profile/page.js
-import { redirect } from 'next/navigation';
-import { db } from '@/lib/firebase-admin';
-import { getAuthSession } from '@/lib/auth';
-
+// src/app/profile/page.js (Server Component)
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
-export default async function ProfilePage() {
-  // 1) Сессия
+import { redirect } from 'next/navigation';
+import { getAuthSession } from '@/lib/auth';
+import ClientProfile from './ClientProfile';
+
+export default async function Page() {
+  // Пускаем только залогиненных (по session cookie)
   const session = await getAuthSession();
   const uid = session?.user?.uid;
-  if (!uid) {
-    redirect('/login?next=/profile');
-  }
+  if (!uid) redirect('/login?next=/profile');
+
 
   // 2) Читаем пользователя (не редиректим, если документа нет — покажем пустой профиль)
   let user = {};
@@ -103,3 +103,7 @@ export default async function ProfilePage() {
     </main>
   );
 }
+
+  // Никаких проверок Discord/сервера — просто отрисовываем твой клиентский профиль
+  return <ClientProfile />;
+
