@@ -7,73 +7,100 @@ import { db } from '@/lib/firebase-admin';
 import { getAuthSession } from '@/lib/auth';
 
 /**
- * Проверяет, состоит ли пользователь в гильдии Discord.
- * Источники discordId:
- *  - query ?discordId=... (опционально)
- *  - если нет — по текущей сессии находим users/{uid}.discord.id
- *
- * Возвращает: { isMember: boolean }
+ * Проверяет членство в Discord-гильдии.
+ * discordId берём из query (?discordId=) или из Firestore пользователя по сессии.
+ * Возвращаем подробные ошибки, чтобы видеть, где именно ломается.
  */
 export async function GET(req) {
+  const url = new URL(req.url);
+  const wantDebug = url.searchParams.get('debug') === '1';
+
   try {
-    const url = new URL(req.url);
+    // -------- 0) sanity env
+    const botUrl = process.env.BOT_SERVER_URL?.replace(/\/+$/, '');
+    if (!botUrl) {
+      return NextResponse.json(
+        { error: 'BOT_SERVER_URL is not set on the server' },
+        { status: 500 }
+      );
+    }
+
+    // -------- 1) session
+    const session = await getAuthSession();
+    const uid = session?.user?.uid;
+    if (!uid) {
+      return NextResponse.json({ error: 'Unauthorized (no session)' }, { status: 401 });
+    }
+
+    // -------- 2) discordId (query or firestore)
     let discordId = url.searchParams.get('discordId');
-
-    // Если discordId не передали — вытаскиваем из текущей сессии (users/{uid}.discord.id)
     if (!discordId) {
-      const session = await getAuthSession();
-      const uid = session?.user?.uid;
-      if (!uid) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-
       const snap = await db().collection('users').doc(uid).get();
       if (!snap.exists) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        return NextResponse.json({ error: `User doc not found for ${uid}` }, { status: 404 });
       }
-
       const user = snap.data() || {};
       discordId = user?.discord?.id || null;
       if (!discordId) {
-        return NextResponse.json({ error: 'Discord not linked' }, { status: 409 });
+        return NextResponse.json(
+          { error: 'Discord not linked in Firestore (users/{uid}.discord.id missing)' },
+          { status: 409 }
+        );
       }
     }
 
-    // дергаем бот-сервис
-    const botUrl = process.env.BOT_SERVER_URL?.replace(/\/+$/, '');
-    if (!botUrl) {
-      return NextResponse.json({ error: 'BOT_SERVER_URL is not set' }, { status: 500 });
-    }
+    // -------- 3) call bot server with timeout
+    const controller = new AbortController();
+    const to = setTimeout(() => controller.abort(), 8000);
 
-    const resp = await fetch(`${botUrl}/check-server-membership`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ discordId }),
-      cache: 'no-store',
-    });
-
-    if (!resp.ok) {
-      const text = await resp.text().catch(() => '');
-      return NextResponse.json({ error: 'Bot check failed', details: text }, { status: 502 });
-    }
-
-    const { isMember } = await resp.json();
-
-    // Опционально — отметим в Firestore
+    let botResp;
     try {
-      const session = await getAuthSession();
-      const uid = session?.user?.uid;
-      if (uid && typeof isMember === 'boolean') {
-        await db()
-          .collection('users')
-          .doc(uid)
-          .set({ joinedDiscordServer: !!isMember }, { merge: true });
-      }
-    } catch { /* мягко игнорируем */ }
+      botResp = await fetch(`${botUrl}/check-server-membership`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ discordId }),
+        signal: controller.signal,
+        cache: 'no-store',
+      });
+    } finally {
+      clearTimeout(to);
+    }
 
-    return NextResponse.json({ isMember: !!isMember }, { status: 200 });
+    const botBodyText = await botResp.text().catch(() => '');
+    let botBody;
+    try {
+      botBody = JSON.parse(botBodyText);
+    } catch {
+      botBody = botBodyText;
+    }
+
+    if (!botResp.ok) {
+      return NextResponse.json(
+        {
+          error: 'Bot responded with non-200',
+          botStatus: botResp.status,
+          botBody,
+        },
+        { status: 502 }
+      );
+    }
+
+    const isMember = !!(botBody && typeof botBody.isMember === 'boolean' ? botBody.isMember : false);
+
+    // -------- 4) save flag (best effort)
+    try {
+      await db().collection('users').doc(uid).set({ joinedDiscordServer: isMember }, { merge: true });
+    } catch (e) {
+      // не критично
+      if (wantDebug) console.warn('save joinedDiscordServer failed:', e);
+    }
+
+    return NextResponse.json({ isMember, debug: wantDebug ? { discordId, botBody } : undefined }, { status: 200 });
   } catch (err) {
-    console.error('[/api/discord/check] error:', err);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error('[/api/discord/check] fatal:', err);
+    return NextResponse.json(
+      { error: 'Internal Server Error', details: String(err?.message || err) },
+      { status: 500 }
+    );
   }
 }

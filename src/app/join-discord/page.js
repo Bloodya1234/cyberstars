@@ -1,4 +1,3 @@
-// src/app/join-discord/page.js
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
@@ -12,27 +11,31 @@ export default function JoinDiscordPage() {
 
   const inviteUrl =
     process.env.NEXT_PUBLIC_DISCORD_INVITE_URL ||
-    'https://discord.com'; // подставь свою постоянную ссылку-приглашение
+    'https://discord.com';
 
-  // Функция опроса сервера
   const poll = async () => {
     try {
       setChecking(true);
       setError('');
 
-      // НЕ передаём discordId — сервер сам найдёт по сессии/Firestore
-      const res = await fetch('/api/discord/check', { cache: 'no-store', credentials: 'include' });
+      // добавь ?debug=1 на время отладки, потом можно убрать
+      const res = await fetch('/api/discord/check?debug=1', {
+        cache: 'no-store',
+        credentials: 'include',
+      });
+
+      const text = await res.text();
+      let data = {};
+      try { data = JSON.parse(text); } catch { /* no-op */ }
+
       if (!res.ok) {
-        // если нет привязки или нет сессии — отправим человека под привязку/логин
+        // Быстрое ветвление по статусам
         if (res.status === 401) return router.replace('/login');
         if (res.status === 409) return router.replace('/connect-discord');
-
-        const text = await res.text();
-        setError(text || 'Check failed');
+        setError(text || `HTTP ${res.status}`);
         return;
       }
 
-      const data = await res.json();
       if (data?.isMember) {
         router.replace('/profile');
         return;
@@ -44,14 +47,10 @@ export default function JoinDiscordPage() {
     }
   };
 
-  // Первый запрос и последующий поллинг
   useEffect(() => {
-    poll(); // сразу проверим один раз
-
-    timerRef.current = setInterval(poll, 5000); // затем каждые 5 сек
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    poll();
+    timerRef.current = setInterval(poll, 5000);
+    return () => timerRef.current && clearInterval(timerRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -76,7 +75,11 @@ export default function JoinDiscordPage() {
         {checking ? 'Waiting for your join…' : 'We check every 5s automatically.'}
       </div>
 
-      {error && <div className="text-red-400 text-sm max-w-xl break-words">{error}</div>}
+      {error && (
+        <pre className="text-red-400 text-xs max-w-2xl whitespace-pre-wrap break-words">
+          {error}
+        </pre>
+      )}
     </div>
   );
 }
