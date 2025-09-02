@@ -152,7 +152,7 @@ export async function GET(req) {
     }
 
     // --- 5) Редиректим на профиль ---
-    return NextResponse.redirect(`${base}/profile`);
+    return NextResponse.redirect(`${base}/join-discord`);
   } catch (err) {
     // Если произошло что-то неожиданное — лучше вернуть 500, чем ловить 504 от платформы
     console.error('Discord OAuth failed:', err);
