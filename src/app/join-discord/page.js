@@ -2,80 +2,61 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function JoinDiscordPage() {
-  const router = useRouter();
   const [checking, setChecking] = useState(false);
+  const [error, setError] = useState('');
 
-  // ⚠️ discordId нужно знать. Мы берём его из /api/user-info (куки-сессия уже должна быть)
-  const [discordId, setDiscordId] = useState(null);
-
+  // Автопроверка членства каждые 5 секунд
   useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const meRes = await fetch('/api/user-info', { credentials: 'include', cache: 'no-store' });
-        if (!meRes.ok) return;
-        const me = await meRes.json();
-        if (!cancelled) setDiscordId(me?.discord?.id || null);
-      } catch {}
-    })();
-
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    if (!discordId) return;
-
-    let cancelled = false;
-    let timer;
-
-    async function tick() {
+    let alive = true;
+    const tick = async () => {
       try {
         setChecking(true);
-        const r = await fetch(`/api/discord/check?discordId=${encodeURIComponent(discordId)}`, {
-          cache: 'no-store',
-        });
-        const j = await r.json().catch(() => ({}));
-        // не показываем ошибки — просто ждём, пока станет true
-        if (j?.isMember) {
-          router.replace('/profile');
-          return;
+        const r = await fetch('/api/discord/check', { cache: 'no-store', credentials: 'include' });
+        if (!alive) return;
+        if (r.ok) {
+          const j = await r.json();
+          if (j?.isMember) {
+            window.location.replace('/profile');
+            return;
+          }
         }
-      } catch {}
-      finally {
-        setChecking(false);
-        // запускаем следующий опрос
-        if (!cancelled) {
-          timer = setTimeout(tick, 5000);
-        }
+      } catch (e) {
+        if (alive) setError('Check failed, retrying…');
+      } finally {
+        if (alive) setChecking(false);
+        setTimeout(() => alive && tick(), 5000);
       }
-    }
-
+    };
     tick();
-    return () => { cancelled = true; if (timer) clearTimeout(timer); };
-  }, [discordId, router]);
+    return () => { alive = false; };
+  }, []);
 
-  // Ссылка-инвайт — та же, что у тебя в настройках
-  const inviteUrl = process.env.NEXT_PUBLIC_DISCORD_INVITE_URL || 'https://discord.gg/zeU7RPskKg';
+  const manualInvite = process.env.NEXT_PUBLIC_DISCORD_INVITE_URL;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center text-center px-6">
-      <h1 className="text-5xl font-extrabold mb-6">Join our Discord</h1>
-      <p className="opacity-80 mb-6">You must join our Discord server to use the platform.</p>
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+      <h1 className="text-2xl font-bold mb-2">Join our Discord</h1>
+      <p className="opacity-80 mb-4">
+        Please join the Discord server to continue. This page will auto-continue once you join.
+      </p>
 
-      <a
-        href={inviteUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-cyan-400 underline text-3xl mb-4"
-      >
-        Join Discord Server
-      </a>
+      {manualInvite && (
+        <a
+          href={manualInvite}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-cyan-400 underline mb-4"
+        >
+          Click here to join manually
+        </a>
+      )}
 
-      <div className="opacity-60">{checking ? 'Checking…' : 'We check every 5s automatically.'}</div>
+      <div className="text-sm opacity-70">
+        {checking ? 'Checking membership…' : 'Waiting for join…'}
+        {error && <div className="text-red-400 mt-2">{error}</div>}
+      </div>
     </div>
   );
 }

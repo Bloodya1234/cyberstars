@@ -3,72 +3,81 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
+import { db } from '@/lib/firebase-admin';
+import { getAuthSession } from '@/lib/auth';
 
-// безопасный fetch с тайм-аутом
-async function timedFetch(url, opts = {}, timeoutMs = 9000) {
-  const ac = new AbortController();
-  const t = setTimeout(() => ac.abort(), timeoutMs);
-  try {
-    // важно выключить кеш
-    const res = await fetch(url, { ...opts, signal: ac.signal, cache: 'no-store' });
-    return res;
-  } finally {
-    clearTimeout(t);
-  }
-}
-
+/**
+ * Проверяет, состоит ли пользователь в Discord-сервере.
+ * Источник правды — бот-сервис (BOT_SERVER_URL).
+ *
+ * Использование:
+ *   GET /api/discord/check?discordId=123     // опционально; если не передан — возьмём из Firestore по текущей сессии
+ *
+ * Ответ:
+ *   { isMember: true|false }
+ *
+ * Побочный эффект:
+ *   Если isMember === true и есть сессия — обновляем users/<uid>:
+ *     { joinedDiscordServer: true }
+ */
 export async function GET(req) {
   try {
-    const { searchParams } = new URL(req.url);
-    const discordId = searchParams.get('discordId');
+    const url = new URL(req.url);
+    const queryDiscordId = url.searchParams.get('discordId')?.trim() || '';
 
+    const session = await getAuthSession(); // cookie-проверка
+    const uid = session?.user?.uid || null;
+
+    // 1) Берём discordId: из query или из Firestore по текущему пользователю
+    let discordId = queryDiscordId;
     if (!discordId) {
-      // не считаем это ошибкой — просто нечего проверять
-      return NextResponse.json({ isMember: false, reason: 'missing_discordId' }, { status: 200 });
+      if (!uid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+      const snap = await db().collection('users').doc(uid).get();
+      if (!snap.exists) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+      const user = snap.data() || {};
+      discordId = user?.discord?.id || '';
+      if (!discordId) {
+        return NextResponse.json({ error: 'Discord not linked' }, { status: 400 });
+      }
     }
 
+    // 2) Пингуем бот-сервис
     const botUrl = process.env.BOT_SERVER_URL?.replace(/\/+$/, '');
     if (!botUrl) {
-      // если бот не настроен — тоже не ломаемся
-      return NextResponse.json({ isMember: false, reason: 'no_bot_url' }, { status: 200 });
+      console.error('[discord/check] BOT_SERVER_URL is missing');
+      return NextResponse.json({ error: 'Bot URL not configured' }, { status: 500 });
     }
 
-    // дергаем бота — у бота должен быть эндпоинт /check-server-membership
-    // тело запроса — { discordId }
-    let botRes;
-    try {
-      botRes = await timedFetch(`${botUrl}/check-server-membership`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ discordId }),
-      }, 9000); // 9 сек: хватит даже на холодный старт Render
-    } catch (e) {
-      // Тайм-аут/abort/сеть. Не роняем — возвращаем false и продолжаем polling.
-      return NextResponse.json(
-        { isMember: false, reason: 'bot_timeout', details: String(e?.message || e) },
-        { status: 200 }
+    const r = await fetch(`${botUrl}/check-server-membership`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // для простоты передаём только discordId
+      body: JSON.stringify({ discordId }),
+      // бот-портал публичный, cookie не нужны
+    });
+
+    if (!r.ok) {
+      const txt = await r.text().catch(() => '');
+      console.error('[discord/check] bot responded not OK:', r.status, txt);
+      return NextResponse.json({ error: 'Bot check failed' }, { status: 502 });
+    }
+
+    const ans = await r.json().catch(() => ({}));
+    const isMember = !!ans?.isMember;
+
+    // 3) Если есть валидная сессия и участник сервера — отметим это в Firestore
+    if (isMember && uid) {
+      await db().collection('users').doc(uid).set(
+        { joinedDiscordServer: true },
+        { merge: true }
       );
     }
 
-    // Пытаемся прочитать JSON бота
-    let json = {};
-    try { json = await botRes.json(); } catch {}
-
-    // Если бот ответил 200 и дал поле isMember — доверяем
-    if (botRes.ok && typeof json.isMember === 'boolean') {
-      return NextResponse.json({ isMember: json.isMember }, { status: 200 });
-    }
-
-    // Иначе считаем "пока не член", не ломая UX
-    return NextResponse.json(
-      { isMember: false, reason: 'bot_bad_response', details: json },
-      { status: 200 }
-    );
+    return NextResponse.json({ isMember });
   } catch (err) {
-    // На всякий: никогда не 500 — чтобы UI не пугался
-    return NextResponse.json(
-      { isMember: false, reason: 'server_error', details: String(err?.message || err) },
-      { status: 200 }
-    );
+    console.error('[discord/check] fatal:', err);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
