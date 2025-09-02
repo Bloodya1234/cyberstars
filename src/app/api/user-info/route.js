@@ -7,30 +7,40 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    // серверная сессия (cookie "session")
+    // Серверная сессия по cookie "session"
     const session = await getAuthSession();
-    const uid = session?.user?.uid;
-    if (!uid) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    const uid = session?.user?.uid;               // ожидаем "steam:7656..."
+    if (!uid) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
-    // читаем Firestore (ВАЖНО: db — функция)
+    // Читаем документ пользователя
     const snap = await db().collection('users').doc(uid).get();
-    if (!snap.exists) return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
+    const data = snap.exists ? (snap.data() || {}) : {};
 
-    const user = snap.data() || {};
-    const payload = {
+    // Формируем ответ (всегда возвращаем discord и joinedDiscordServer)
+    const res = {
       uid,
-      role: user.role || 'user',
-      // добавили ↓↓↓
-      discord: user.discord || null,                // { id, tag, avatar } или null
-      joinedDiscordServer: !!user.joinedDiscordServer,
+      role: data.role || 'user',
+      discord: data.discord || null, // {id, tag, avatar} | null
+      joinedDiscordServer:
+        typeof data.joinedDiscordServer === 'boolean'
+          ? data.joinedDiscordServer
+          : false,
     };
 
-    return new Response(JSON.stringify(payload), {
+    return new Response(JSON.stringify(res), {
       status: 200,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      headers: { 'Content-Type': 'application/json' },
     });
-  } catch (e) {
-    console.error('[user-info] fatal:', e);
-    return new Response(JSON.stringify({ error: 'Internal Server Error' }), { status: 500 });
+  } catch (err) {
+    console.error('[user-info] Fatal:', err?.stack || err);
+    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 }
