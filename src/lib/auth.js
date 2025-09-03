@@ -1,27 +1,20 @@
 // src/lib/auth.js
-import { cookies } from 'next/headers';
-import { adminAuth } from './firebase-admin';
+import { getAdminAuth } from './firebase-admin';
 
-/**
- * Возвращает { user: { uid } } если сессия валидна, иначе null.
- * Проверяется именно session cookie, которую мы ставим в /api/sessionLogin.
- */
-export async function getAuthSession() {
-  try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('session')?.value;
-    if (!sessionCookie) {
-      // Нет куки — нет сессии
-      return null;
-    }
+/** Проверить session cookie; по умолчанию проверяем на отзыв (revoked). */
+export async function verifySessionCookie(cookie, checkRevoked = true) {
+  const auth = getAdminAuth();
+  return auth.verifySessionCookie(cookie, checkRevoked);
+}
 
-    // "checkRevoked: true" — опционально, но полезно.
-    const decoded = await adminAuth().verifySessionCookie(sessionCookie, true);
+/** Создать session cookie на заданный срок (в мс). */
+export async function createSessionCookie(idToken, expiresInMs) {
+  const auth = getAdminAuth();
+  return auth.createSessionCookie(idToken, { expiresIn: expiresInMs });
+}
 
-    // decoded.uid = наш UID вида "steam:7656..."
-    return { user: { uid: decoded.uid } };
-  } catch (err) {
-    console.error('getAuthSession() verifySessionCookie error:', err);
-    return null;
-  }
+/** Отозвать refresh-токены пользователя (инвалидация сессий). */
+export async function revokeUserSessions(uid) {
+  const auth = getAdminAuth();
+  await auth.revokeRefreshTokens(uid);
 }
