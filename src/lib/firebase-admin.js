@@ -1,77 +1,92 @@
 // src/lib/firebase-admin.js
-import admin from 'firebase-admin';
+import { getApps, initializeApp, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getAuth as _getAuth } from 'firebase-admin/auth';
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.applicationDefault(),
-    // или admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY))
+let _db = null;
+let _auth = null;
+
+function ensureServerNode() {
+  if (typeof window !== 'undefined') throw new Error('Admin SDK must not run in the browser');
+  if (process.env.NEXT_RUNTIME === 'edge') throw new Error('Admin SDK is not supported on the Edge runtime');
+}
+
+const norm = (s) => s.replace(/\r/g, '').trim();
+
+function fromJSON() {
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  if (!raw) return null;
+  const j = JSON.parse(raw);
+  if (!j.project_id || !j.client_email || !j.private_key) {
+    throw new Error('Service account JSON missing required fields');
+  }
+  j.private_key = norm(j.private_key.replace(/\\n/g, '\n'));
+  return { project_id: j.project_id, client_email: j.client_email, private_key: j.private_key };
+}
+
+function fromB64() {
+  const b64 = process.env.FIREBASE_PRIVATE_KEY_BASE64;
+  if (!b64) return null;
+  const decoded = Buffer.from(b64, 'base64').toString('utf8');
+
+  if (decoded.trim().startsWith('{')) {
+    const j = JSON.parse(decoded);
+    if (!j.project_id || !j.client_email || !j.private_key) {
+      throw new Error('Decoded JSON missing required fields');
+    }
+    j.private_key = norm(j.private_key.replace(/\\n/g, '\n'));
+    return { project_id: j.project_id, client_email: j.client_email, private_key: j.private_key };
+  }
+
+  const project_id = process.env.FIREBASE_PROJECT_ID;
+  const client_email = process.env.FIREBASE_CLIENT_EMAIL;
+  if (!project_id || !client_email) {
+    throw new Error('FIREBASE_PROJECT_ID and FIREBASE_CLIENT_EMAIL are required with FIREBASE_PRIVATE_KEY_BASE64 (PEM)');
+  }
+  const pem = norm(decoded.includes('\\n') ? decoded.replace(/\\n/g, '\n') : decoded);
+  if (!pem.includes('BEGIN PRIVATE KEY') || !pem.includes('END PRIVATE KEY')) {
+    throw new Error('Decoded PEM does not look like a valid private key');
+  }
+  return { project_id, client_email, private_key: pem };
+}
+
+function fromPEM() {
+  const project_id = process.env.FIREBASE_PROJECT_ID;
+  const client_email = process.env.FIREBASE_CLIENT_EMAIL;
+  const pk = process.env.FIREBASE_PRIVATE_KEY;
+  if (!project_id || !client_email || !pk) return null;
+  return { project_id, client_email, private_key: norm(pk.replace(/\\n/g, '\n')) };
+}
+
+function initIfNeeded() {
+  if (getApps().length) return;
+  const svc = fromJSON() ?? fromB64() ?? fromPEM();
+  if (!svc) {
+    throw new Error(
+      'Missing Firebase Admin credentials. Provide FIREBASE_SERVICE_ACCOUNT_KEY or FIREBASE_PRIVATE_KEY_BASE64 (+ PROJECT_ID/CLIENT_EMAIL) or FIREBASE_PRIVATE_KEY (+ PROJECT_ID/CLIENT_EMAIL).'
+    );
+  }
+  initializeApp({
+    credential: cert({
+      projectId: svc.project_id,
+      clientEmail: svc.client_email,
+      privateKey: svc.private_key,
+    }),
   });
 }
 
-export const db = admin.firestore();
-
-import { getApps, initializeApp, cert } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-
-/**
- * Инициализация Firebase Admin по требованию.
- * Никаких ошибок на этапе импорта — только при первом реальном вызове.
- */
-function initAdminIfNeeded() {
-  if (getApps().length) return;
-
-  // 1) Пытаемся из BASE64 JSON (рекомендуется для Vercel/Render и т.п.)
-  let creds;
-  const b64 = process.env.FIREBASE_PRIVATE_KEY_BASE64;
-  if (b64) {
-    try {
-      const json = JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
-      creds = {
-        projectId: json.project_id || process.env.FIREBASE_PROJECT_ID,
-        clientEmail: json.client_email || process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: json.private_key,
-      };
-    } catch (e) {
-      console.warn('⚠️ Invalid FIREBASE_PRIVATE_KEY_BASE64 (cannot JSON.parse)');
-    }
-  }
-
-  // 2) Фолбэк: три обычные переменные (если вдруг используете их)
-  if (!creds) {
-    const pk = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-    if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && pk) {
-      creds = {
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: pk,
-      };
-    }
-  }
-
-  // На сборке переменных может не быть — не падаем.
-  if (!creds) {
-    console.warn('⚠️ Firebase Admin creds are not available at build time. Will try again at runtime.');
-    return;
-  }
-
-  initializeApp({ credential: cert(creds) });
+export function getDb() {
+  ensureServerNode();
+  if (_db) return _db;
+  initIfNeeded();
+  _db = getFirestore();
+  return _db;
 }
 
-/**
- * Возвращает Auth, гарантируя инициализацию.
- */
-export function adminAuth() {
-  initAdminIfNeeded();
-  if (!getApps().length) throw new Error('Firebase Admin is not initialized: missing credentials');
-  return getAuth();
-}
-
-/**
- * Возвращает Firestore, гарантируя инициализацию.
- */
-export function db() {
-  initAdminIfNeeded();
-  if (!getApps().length) throw new Error('Firebase Admin is not initialized: missing credentials');
-  return getFirestore();
+export function getAdminAuth() {
+  ensureServerNode();
+  if (_auth) return _auth;
+  initIfNeeded();
+  _auth = _getAuth();
+  return _auth;
 }
