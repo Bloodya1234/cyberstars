@@ -1,5 +1,13 @@
-// src/app/join-discord/page.js
-'use client';
+import { redirectIfReadyToProfile } from '@/lib/redirect-to-profile.server';
+import JoinDiscordClient from './JoinDiscordClient';
+
+export const dynamic = 'force-dynamic';
+
+export default async function Page() {
+  await redirectIfReadyToProfile();
+  return <JoinDiscordClient />;
+}
+
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';

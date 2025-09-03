@@ -1,37 +1,10 @@
-'use client';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+// src/app/login/page.js
+import { redirectIfReadyToProfile } from '@/lib/redirect-to-profile.server';
+import LoginClient from './LoginClient'; // твой клиентский UI логина (если есть)
 
-export default function LoginPage() {
-  const router = useRouter();
+export const dynamic = 'force-dynamic'; // на всякий случай, cookies() уже делает динамичным
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const r = await fetch('/api/user-info', { cache: 'no-store' });
-        if (!r.ok) return;
-        const u = await r.json();
-        if (u?.uid && u?.discord?.id && u?.joinedDiscordServer === true) {
-          router.replace('/profile');
-        }
-      } catch {}
-    })();
-  }, [router]);
-
-  // ...остальной UI логина
-}
-
-import LoginScreen from './LoginScreen';
-
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-export const fetchCache = 'default-no-store';
-
-export default function Page() {
-  return (
-    <Suspense fallback={<div className="p-6 text-white">Loading…</div>}>
-      <LoginScreen />
-    </Suspense>
-  );
+export default async function Page() {
+  await redirectIfReadyToProfile(); // ← если всё ок — улетим в /profile
+  return <LoginClient />;           // иначе покажем обычный логин
 }
