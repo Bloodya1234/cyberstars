@@ -11,20 +11,41 @@ function ensureServerNode() {
   if (process.env.NEXT_RUNTIME === 'edge') throw new Error('Admin SDK is not supported on the Edge runtime');
 }
 
+function loadPrivateKey() {
+  // 1) Предпочитаем BASE64-вариант
+  const b64 = process.env.FIREBASE_PRIVATE_KEY_BASE64;
+  if (b64) {
+    // декод + базовая нормализация перевода строк
+    const decoded = Buffer.from(b64, 'base64').toString('utf8').replace(/\r/g, '').trim();
+
+    // если вдруг в decoded оказались литеральные '\n' (редко, но бывает) — заменим их на реальные переводы
+    const maybeFixed = decoded.includes('\\n') ? decoded.replace(/\\n/g, '\n') : decoded;
+
+    if (maybeFixed.includes('BEGIN PRIVATE KEY') && maybeFixed.includes('END PRIVATE KEY')) {
+      return maybeFixed;
+    }
+    // если содержимое не похоже на PEM — пусть упадёт дальше на fallback
+  }
+
+  // 2) Fallback: обычная переменная с экранированными \n
+  const pkRaw = process.env.FIREBASE_PRIVATE_KEY;
+  if (pkRaw) {
+    return pkRaw.replace(/\\n/g, '\n').replace(/\r/g, '').trim();
+  }
+
+  throw new Error('Missing Firebase private key: set FIREBASE_PRIVATE_KEY_BASE64 or FIREBASE_PRIVATE_KEY');
+}
+
 function initIfNeeded() {
   if (getApps().length) return;
 
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKeyBase64 = process.env.FIREBASE_PRIVATE_KEY_BASE64;
-
-  if (!projectId || !clientEmail || !privateKeyBase64) {
-    throw new Error(
-      'Missing Firebase Admin env: set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY_BASE64'
-    );
+  if (!projectId || !clientEmail) {
+    throw new Error('Missing FIREBASE_PROJECT_ID or FIREBASE_CLIENT_EMAIL');
   }
 
-  const privateKey = Buffer.from(privateKeyBase64, 'base64').toString('utf8');
+  const privateKey = loadPrivateKey();
 
   initializeApp({
     credential: cert({ projectId, clientEmail, privateKey }),
