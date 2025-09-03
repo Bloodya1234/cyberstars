@@ -1,10 +1,10 @@
 // src/app/login/page.js
 import { redirectIfReadyToProfile } from '@/lib/redirect-to-profile.server';
-import LoginClient from './LoginClient'; // твой клиентский UI логина (если есть)
+import LoginClient from './LoginClient';
 
-export const dynamic = 'force-dynamic'; // на всякий случай, cookies() уже делает динамичным
+export const dynamic = 'force-dynamic';
 
 export default async function Page() {
-  await redirectIfReadyToProfile(); // ← если всё ок — улетим в /profile
-  return <LoginClient />;           // иначе покажем обычный логин
+  await redirectIfReadyToProfile();
+  return <LoginClient />;
 }
