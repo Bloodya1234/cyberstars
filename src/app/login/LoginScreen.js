@@ -1,26 +1,6 @@
-// src/app/login/LoginClient.js
+// src/app/login/LoginScreen.js
 'use client';
 
-import React from 'react';
-
-export default function LoginClient() {
-  const onSteam = () => {
-    // у тебя есть /api/steam — используем его
-    window.location.href = '/api/steam';
-  };
-
-  return (
-    <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 p-8 text-center">
-      <h1 className="text-2xl font-bold text-white">Sign in</h1>
-      <button className="glow-button glow-green px-6 py-3" onClick={onSteam}>
-        Sign in with Steam
-      </button>
-    </div>
-  );
-}
-
-
-// src/app/login/LoginScreen.js
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
@@ -29,7 +9,7 @@ import { app } from '@/firebase';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 
-export default function LoginClient() {
+export default function LoginScreen() {
   const searchParams = useSearchParams();
   const { t } = useTranslation('common');
   const [mounted, setMounted] = useState(false);
@@ -84,7 +64,6 @@ export default function LoginClient() {
         ? window.location.origin
         : (process.env.NEXT_PUBLIC_BASE_URL || 'https://dota-platform-cyberstars.vercel.app');
 
-    // return_to и realm строим от текущего домена
     const returnToUrl = new URL('/api/steam/return', origin);
     if (inviteTeam) returnToUrl.searchParams.set('inviteTeam', inviteTeam);
 
