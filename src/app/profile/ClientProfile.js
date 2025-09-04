@@ -12,23 +12,44 @@ import ClientLayout from '@/components/ClientLayout';
 // ... твои импорты выше
 
 
-// внутри компонента ProfileClient, рядом с остальными useEffect:
+// внутри компонента ProfileClient (после стейтов/основного эффекта)
 useEffect(() => {
-  if (loading) return;     // ждём, пока подтянется юзер
+  if (loading) return;
   if (!user) return;
 
-  // 1) нет подключённого Discord — ведём на шаг авторизации дискорда
+  // если не привязан Discord — ведем на подключение
   if (!user.discord || !user.discord.id) {
     router.replace('/connect-discord');
     return;
   }
 
-  // 2) Discord уже привязан, но юзер не в сервере — ведём на инвайт/чек
+  // если Discord привязан, но нет факта вступления — на join
   if (user.joinedDiscordServer !== true) {
     router.replace('/join-discord');
     return;
   }
 }, [loading, user, router]);
+
+// подстраховка: если discord.id есть, но флаг не проставлен — 
+// дернем чекер один раз и мягко обновим страницу
+useEffect(() => {
+  if (!user?.discord?.id) return;
+  if (user?.joinedDiscordServer === true) return;
+
+  const params = new URLSearchParams();
+  params.set('discordId', user.discord.id);
+  params.set('uid', user.steamId); // у вас steamId === uid документа
+
+  fetch(`/api/discord/check?${params.toString()}`, { cache: 'no-store' })
+    .then(r => r.json())
+    .then(j => {
+      if (j?.isMember) {
+        router.refresh?.();
+      }
+    })
+    .catch(() => {});
+}, [user, router]);
+
 
 function ErrorBoundary({ children }) {
   const [{ error, info }, setErr] = useState({ error: null, info: null });
