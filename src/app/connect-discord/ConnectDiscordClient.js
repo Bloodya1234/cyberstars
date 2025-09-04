@@ -1,9 +1,9 @@
 // src/app/connect-discord/ConnectDiscordClient.js
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
-function encodeState(obj) {
+function b64(obj) {
   try {
     return btoa(JSON.stringify(obj));
   } catch {
@@ -12,14 +12,14 @@ function encodeState(obj) {
 }
 
 export default function ConnectDiscordClient() {
+  const [uid, setUid] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Можно подтянуть текущего юзера, чтобы положить его uid/steamId в state
-  const [uid, setUid] = useState(null);
+  // Подтягиваем текущего пользователя, чтобы положить uid в state Discord OAuth
   useEffect(() => {
     (async () => {
       try {
-        const r = await fetch('/api/user-info', { cache: 'no-store' });
+        const r = await fetch('/api/user-info', { cache: 'no-store', credentials: 'include' });
         if (!r.ok) return;
         const j = await r.json();
         setUid(j?.uid || null);
@@ -27,14 +27,15 @@ export default function ConnectDiscordClient() {
     })();
   }, []);
 
-  const startDiscordOAuth = () => {
+  const startDiscordOAuth = useCallback(() => {
     setLoading(true);
     const origin = window.location.origin;
     const redirectUri = encodeURIComponent(`${origin}/api/discord/callback`);
-    const state = encodeURIComponent(encodeState({ steamId: uid || '' }));
+    const state = encodeURIComponent(b64({ steamId: uid || '' }));
 
     const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
-    const scope = encodeURIComponent('identify'); // добавь guilds.join/др. при необходимости
+    const scope = encodeURIComponent('identify'); // добавь/измени при необходимости
+
     const url =
       `https://discord.com/api/oauth2/authorize` +
       `?client_id=${clientId}` +
@@ -44,7 +45,7 @@ export default function ConnectDiscordClient() {
       `&state=${state}`;
 
     window.location.href = url;
-  };
+  }, [uid]);
 
   return (
     <main className="min-h-[60vh] flex flex-col items-center justify-center gap-4 p-8 text-center">

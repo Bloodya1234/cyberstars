@@ -9,10 +9,6 @@ export default async function Page() {
   return <ConnectDiscordClient />;
 }
 
-
-
-import { useEffect, useState, useCallback } from 'react';
-
 function b64(obj) {
   return typeof window !== 'undefined'
     ? btoa(JSON.stringify(obj))
