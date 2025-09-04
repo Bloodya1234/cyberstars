@@ -1,6 +1,7 @@
+// src/app/profile/ClientProfile.js
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/lib/i18n.client';
 import Image from 'next/image';
@@ -9,46 +10,125 @@ import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, updateDoc, getFirestore } from 'firebase/firestore';
 import { app } from '@/firebase';
 import ClientLayout from '@/components/ClientLayout';
-// ... твои импорты выше
 
+function steam64To32(steam64) {
+  return String(BigInt(steam64) - BigInt('76561197960265728'));
+}
 
-// внутри компонента ProfileClient (после стейтов/основного эффекта)
-useEffect(() => {
-  if (loading) return;
-  if (!user) return;
+function EligibilityModal({ show, onClose, t }) {
+  /* ... твоя реализация без изменений ... */
+}
 
-  // если не привязан Discord — ведем на подключение
-  if (!user.discord || !user.discord.id) {
-    router.replace('/connect-discord');
-    return;
-  }
+async function syncRankedMatchCount(steamId32, userDocId, db) {
+  /* ... твоя реализация без изменений ... */
+}
 
-  // если Discord привязан, но нет факта вступления — на join
-  if (user.joinedDiscordServer !== true) {
-    router.replace('/join-discord');
-    return;
-  }
-}, [loading, user, router]);
+export default function ProfileClient() {
+  const { t } = useTranslation('common');
+  const router = useRouter();
 
-// подстраховка: если discord.id есть, но флаг не проставлен — 
-// дернем чекер один раз и мягко обновим страницу
-useEffect(() => {
-  if (!user?.discord?.id) return;
-  if (user?.joinedDiscordServer === true) return;
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [dotaStats, setDotaStats] = useState(null);
+  const [preferredPositions, setPreferredPositions] = useState([]);
+  const [showModal, setShowModal] = useState(false);
 
-  const params = new URLSearchParams();
-  params.set('discordId', user.discord.id);
-  params.set('uid', user.steamId); // у вас steamId === uid документа
+  const positionOptions = ['Carry', 'Mid Lane', 'Offlane', 'Support', 'Hard Support'];
+  const languageOptions = ['English', 'Russian', 'Spanish', 'French', 'German', 'Chinese'];
 
-  fetch(`/api/discord/check?${params.toString()}`, { cache: 'no-store' })
-    .then(r => r.json())
-    .then(j => {
-      if (j?.isMember) {
-        router.refresh?.();
+  const isEligible =
+    (user?.rankedMatchCount || 0) >= 200 &&
+    user?.publicMatchHistory === true;
+
+  // показываем условия при первом заходе
+  useEffect(() => {
+    const seen = localStorage.getItem('seenEligibilityModal');
+    if (!seen) {
+      setShowModal(true);
+      localStorage.setItem('seenEligibilityModal', 'true');
+    }
+  }, []);
+
+  // основной listener авторизации + загрузка профиля/стат
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!firebaseUser) {
+        setUser(null);
+        setLoading(false);
+        router.push('/login');
+        return;
       }
-    })
-    .catch(() => {});
-}, [user, router]);
+      try {
+        const rawUid = firebaseUser?.uid || '';
+        const steamId64 = rawUid.startsWith('steam:') ? rawUid.replace('steam:', '') : rawUid;
+        if (!steamId64 || isNaN(steamId64)) {
+          console.error('Invalid Steam ID:', steamId64);
+          setLoading(false);
+          return;
+        }
+
+        const steamId32 = steam64To32(steamId64);
+        const userRef = doc(db, 'users', firebaseUser.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          setUser({ ...userData, steamId: firebaseUser.uid, openForInvites: userData.openForInvites ?? true });
+          await syncRankedMatchCount(steamId32, firebaseUser.uid, db);
+          setPreferredPositions(userData.preferredPositions || []);
+
+          // ... твой блок загрузки OpenDota (profile, wl, heroes, matches, heroStats) ...
+          // ... и setDotaStats({...}) как у тебя было ...
+        }
+      } catch (error) {
+        console.error('Error fetching profile or stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  // ⬇️ ЭФФЕКТ №1: автоперенаправление, если шаги не пройдены
+  useEffect(() => {
+    if (loading) return;
+    if (!user) return;
+
+    // нет привязки Discord → отправляем подключить
+    if (!user.discord || !user.discord.id) {
+      router.replace('/connect-discord');
+      return;
+    }
+
+    // привязка есть, но нет членства сервера → на join
+    if (user.joinedDiscordServer !== true) {
+      router.replace('/join-discord');
+      return;
+    }
+  }, [loading, user, router]);
+
+  // ⬇️ ЭФФЕКТ №2: подстраховка — один раз дернуть чекер и освежить
+  useEffect(() => {
+    if (!user?.discord?.id) return;
+    if (user?.joinedDiscordServer === true) return;
+
+    const params = new URLSearchParams();
+    params.set('discordId', user.discord.id);
+    params.set('uid', user.steamId); // у тебя steamId == id документа
+
+    fetch(`/api/discord/check?${params.toString()}`, { cache: 'no-store' })
+      .then(r => r.json())
+      .then(j => {
+        if (j?.isMember) {
+          router.refresh?.();
+        }
+      })
+      .catch(() => {});
+  }, [user, router]);
+
+  // ... дальше твоя разметка (return <ClientLayout>...</ClientLayout>) без изменений ...
+}
+
 
 
 function ErrorBoundary({ children }) {

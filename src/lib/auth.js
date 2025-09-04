@@ -1,4 +1,5 @@
 // src/lib/auth.js
+import { cookies } from 'next/headers';
 import { getAdminAuth } from './firebase-admin';
 
 /** Проверить session cookie; по умолчанию проверяем на отзыв (revoked). */
@@ -17,4 +18,15 @@ export async function createSessionCookie(idToken, expiresInMs) {
 export async function revokeUserSessions(uid) {
   const auth = getAdminAuth();
   await auth.revokeRefreshTokens(uid);
+}
+export async function getAuthSession() {
+  try {
+    const session = cookies().get('session')?.value;
+    if (!session) return null;
+    const auth = getAdminAuth();
+    const decoded = await auth.verifySessionCookie(session, true);
+    return { uid: decoded.uid };
+  } catch {
+    return null;
+  }
 }
