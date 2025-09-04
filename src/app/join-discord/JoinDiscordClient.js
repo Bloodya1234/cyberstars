@@ -88,14 +88,6 @@ export default function JoinDiscordClient() {
           disabled={!me?.discord?.id || checking}
           className="px-6 py-3 rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
         >
-          {checking ? 'Waiting for membership…' : 'Open Invite & Wait for Check'}
-        </button>
-
-        <button
-          onClick={() => router.replace('/profile')}
-          className="mt-4 px-6 py-3 rounded bg-gray-700 text-white hover:bg-gray-800"
-        >
-          Go to Profile now
         </button>
       </div>
     </main>
