@@ -1,15 +1,10 @@
-import { Suspense } from 'react';
-import DiscordLoginClient from './DiscordLoginClient';
+// src/app/login/page.js
+import { redirectIfReadyToProfile } from '@/lib/redirect-to-profile.server';
+import LoginScreen from './LoginScreen';
 
-export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-export const fetchCache = 'default-no-store';
 
-export default function Page() {
-  return (
-    <Suspense fallback={<div className="p-6 text-center">Loading…</div>}>
-      <DiscordLoginClient />
-    </Suspense>
-  );
+export default async function Page() {
+  await redirectIfReadyToProfile();
+  return <LoginScreen />;
 }

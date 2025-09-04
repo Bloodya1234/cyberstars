@@ -1,4 +1,24 @@
+// src/app/login/LoginClient.js
 'use client';
+
+import React from 'react';
+
+export default function LoginClient() {
+  const onSteam = () => {
+    // у тебя есть /api/steam — используем его
+    window.location.href = '/api/steam';
+  };
+
+  return (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 p-8 text-center">
+      <h1 className="text-2xl font-bold text-white">Sign in</h1>
+      <button className="glow-button glow-green px-6 py-3" onClick={onSteam}>
+        Sign in with Steam
+      </button>
+    </div>
+  );
+}
+
 
 // src/app/login/LoginScreen.js
 import { useEffect, useState } from 'react';
