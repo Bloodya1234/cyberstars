@@ -11,146 +11,6 @@ import { doc, getDoc, updateDoc, getFirestore } from 'firebase/firestore';
 import { app } from '@/firebase';
 import ClientLayout from '@/components/ClientLayout';
 
-function steam64To32(steam64) {
-  return String(BigInt(steam64) - BigInt('76561197960265728'));
-}
-
-function EligibilityModal({ show, onClose, t }) {
-  /* ... твоя реализация без изменений ... */
-}
-
-async function syncRankedMatchCount(steamId32, userDocId, db) {
-  /* ... твоя реализация без изменений ... */
-}
-
-export default function ProfileClient() {
-  const { t } = useTranslation('common');
-  const router = useRouter();
-
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [dotaStats, setDotaStats] = useState(null);
-  const [preferredPositions, setPreferredPositions] = useState([]);
-  const [showModal, setShowModal] = useState(false);
-
-  const positionOptions = ['Carry', 'Mid Lane', 'Offlane', 'Support', 'Hard Support'];
-  const languageOptions = ['English', 'Russian', 'Spanish', 'French', 'German', 'Chinese'];
-
-  const isEligible =
-    (user?.rankedMatchCount || 0) >= 200 &&
-    user?.publicMatchHistory === true;
-
-  // показываем условия при первом заходе
-  useEffect(() => {
-    const seen = localStorage.getItem('seenEligibilityModal');
-    if (!seen) {
-      setShowModal(true);
-      localStorage.setItem('seenEligibilityModal', 'true');
-    }
-  }, []);
-
-  // основной listener авторизации + загрузка профиля/стат
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (!firebaseUser) {
-        setUser(null);
-        setLoading(false);
-        router.push('/login');
-        return;
-      }
-      try {
-        const rawUid = firebaseUser?.uid || '';
-        const steamId64 = rawUid.startsWith('steam:') ? rawUid.replace('steam:', '') : rawUid;
-        if (!steamId64 || isNaN(steamId64)) {
-          console.error('Invalid Steam ID:', steamId64);
-          setLoading(false);
-          return;
-        }
-
-        const steamId32 = steam64To32(steamId64);
-        const userRef = doc(db, 'users', firebaseUser.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const userData = userSnap.data();
-          setUser({ ...userData, steamId: firebaseUser.uid, openForInvites: userData.openForInvites ?? true });
-          await syncRankedMatchCount(steamId32, firebaseUser.uid, db);
-          setPreferredPositions(userData.preferredPositions || []);
-
-          // ... твой блок загрузки OpenDota (profile, wl, heroes, matches, heroStats) ...
-          // ... и setDotaStats({...}) как у тебя было ...
-        }
-      } catch (error) {
-        console.error('Error fetching profile or stats:', error);
-      } finally {
-        setLoading(false);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [router]);
-
-  // ⬇️ ЭФФЕКТ №1: автоперенаправление, если шаги не пройдены
-  useEffect(() => {
-    if (loading) return;
-    if (!user) return;
-
-    // нет привязки Discord → отправляем подключить
-    if (!user.discord || !user.discord.id) {
-      router.replace('/connect-discord');
-      return;
-    }
-
-    // привязка есть, но нет членства сервера → на join
-    if (user.joinedDiscordServer !== true) {
-      router.replace('/join-discord');
-      return;
-    }
-  }, [loading, user, router]);
-
-  // ⬇️ ЭФФЕКТ №2: подстраховка — один раз дернуть чекер и освежить
-  useEffect(() => {
-    if (!user?.discord?.id) return;
-    if (user?.joinedDiscordServer === true) return;
-
-    const params = new URLSearchParams();
-    params.set('discordId', user.discord.id);
-    params.set('uid', user.steamId); // у тебя steamId == id документа
-
-    fetch(`/api/discord/check?${params.toString()}`, { cache: 'no-store' })
-      .then(r => r.json())
-      .then(j => {
-        if (j?.isMember) {
-          router.refresh?.();
-        }
-      })
-      .catch(() => {});
-  }, [user, router]);
-
-  // ... дальше твоя разметка (return <ClientLayout>...</ClientLayout>) без изменений ...
-}
-
-
-
-function ErrorBoundary({ children }) {
-  const [{ error, info }, setErr] = useState({ error: null, info: null });
-  // простейший «ручной» boundary через try/catch в children
-  try {
-    if (error) {
-      return (
-        <div className="p-6 text-red-400">
-          <p className="font-bold mb-2">Profile crashed:</p>
-          <pre className="text-xs whitespace-pre-wrap">{String(error)}</pre>
-          {info ? <pre className="text-xs mt-2">{String(info)}</pre> : null}
-        </div>
-      );
-    }
-    return children;
-  } catch (e) {
-    setErr({ error: e, info: null });
-    return null;
-  }
-}
-
 const auth = getAuth(app);
 const db = getFirestore(app);
 
@@ -251,9 +111,7 @@ export default function ProfileClient() {
     if (field === 'languages') setUser((prev) => ({ ...prev, languages: updated }));
     if (user?.steamId) {
       try {
-        await updateDoc(doc(db, 'users', user.steamId), {
-          [field]: updated,
-        });
+        await updateDoc(doc(db, 'users', user.steamId), { [field]: updated });
       } catch (err) {
         console.error(`Error saving ${field}:`, err);
       }
@@ -265,9 +123,7 @@ export default function ProfileClient() {
     setUser((prev) => ({ ...prev, openForInvites: newStatus }));
     if (user?.steamId) {
       try {
-        await updateDoc(doc(db, 'users', user.steamId), {
-          openForInvites: newStatus,
-        });
+        await updateDoc(doc(db, 'users', user.steamId), { openForInvites: newStatus });
       } catch (err) {
         console.error('Error updating invite status:', err);
       }
@@ -283,6 +139,7 @@ export default function ProfileClient() {
     }
   };
 
+  // Основная загрузка профиля после аутентификации
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!firebaseUser) {
@@ -328,14 +185,12 @@ export default function ProfileClient() {
 
           const estimatedMMR = profileData.mmr_estimate?.estimate || null;
           if (estimatedMMR && (!userData.mmr?.solo || userData.mmr?.solo !== estimatedMMR)) {
-            await updateDoc(userRef, {
-              'mmr.solo': estimatedMMR,
-            });
+            await updateDoc(userRef, { 'mmr.solo': estimatedMMR });
           }
           await updateDoc(userRef, {
             'mmr.solo': estimatedMMR,
             rankTier: profileData.rank_tier || null,
-            matchCount: winLossData.win + winLossData.lose,
+            matchCount: (winLossData.win || 0) + (winLossData.lose || 0),
             publicMatchHistory: profileData.profile?.is_public ?? true,
           });
 
@@ -353,7 +208,7 @@ export default function ProfileClient() {
             const heroId = match.hero_id;
             const heroName = heroIdToName[heroId] || heroId;
             const formattedHeroName = heroName.toLowerCase().replace(/[\s-]/g, '_');
-            const heroImg = `/apps/dota2/images/heroes/${formattedHeroName}_full.png`; // относительный путь для cdn.opendota.com
+            const heroImg = `/apps/dota2/images/heroes/${formattedHeroName}_full.png`;
 
             return {
               hero: heroName,
@@ -414,6 +269,40 @@ export default function ProfileClient() {
     return () => unsubscribe();
   }, [router]);
 
+  // Если шаги не пройдены — отправляем на нужные страницы
+  useEffect(() => {
+    if (loading) return;
+    if (!user) return;
+
+    if (!user.discord || !user.discord.id) {
+      router.replace('/connect-discord');
+      return;
+    }
+    if (user.joinedDiscordServer !== true) {
+      router.replace('/join-discord');
+      return;
+    }
+  }, [loading, user, router]);
+
+  // Подстраховка: если discord.id есть, но флаг ещё не проставлен — дергаем чекер
+  useEffect(() => {
+    if (!user?.discord?.id) return;
+    if (user?.joinedDiscordServer === true) return;
+
+    const params = new URLSearchParams();
+    params.set('discordId', user.discord.id);
+    params.set('uid', user.steamId);
+
+    fetch(`/api/discord/check?${params.toString()}`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((j) => {
+        if (j?.isMember) {
+          router.refresh?.();
+        }
+      })
+      .catch(() => {});
+  }, [user, router]);
+
   if (loading) return <div className="p-6 text-center text-white">Loading...</div>;
   if (!user || !dotaStats) return <div className="p-6 text-center text-red-500">User not found or Dota stats missing.</div>;
 
@@ -425,7 +314,6 @@ export default function ProfileClient() {
         <div className="max-w-6xl mx-auto px-6 py-10 font-orbitron space-y-10">
           {/* Header */}
           <div className="flex items-center justify-between flex-wrap gap-6 px-4 py-6 glow-panel rounded-2xl">
-            {/* Avatar with glow ring */}
             <div className="relative w-32 h-32 flex-shrink-0 rounded-full avatar-glow-ring overflow-hidden border-2 border-accent">
               <Image
                 src={user.avatar || '/default-avatar.png'}
@@ -436,7 +324,6 @@ export default function ProfileClient() {
               />
             </div>
 
-            {/* Info Block */}
             <div className="flex-1 min-w-[220px] ml-[2.5rem]">
               <h1 className="text-4xl font-extrabold uppercase text-accent text-glow tracking-wide">
                 {user.name || 'Unknown'}
@@ -448,7 +335,6 @@ export default function ProfileClient() {
               </p>
             </div>
 
-            {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
               <button
                 className={`glow-button ${user.openForInvites ? 'glow-green' : 'glow-red'}`}
@@ -466,16 +352,9 @@ export default function ProfileClient() {
           {/* Overview Boxes */}
           <div className="w-full overflow-x-auto">
             <div className="flex flex-row justify-center items-start gap-6 min-w-[960px] px-4">
-              {/* Rank Name + Ranked Matches */}
               <div className="card w-[300px] text-center shrink-0">
                 {dotaStats.rankIcon ? (
-                  <Image
-                    src={dotaStats.rankIcon}
-                    alt="Rank"
-                    width={64}
-                    height={64}
-                    className="mx-auto my-2"
-                  />
+                  <Image src={dotaStats.rankIcon} alt="Rank" width={64} height={64} className="mx-auto my-2" />
                 ) : (
                   <div className="text-sm text-gray-500 mt-2">No Rank Icon</div>
                 )}
@@ -487,7 +366,6 @@ export default function ProfileClient() {
                 </div>
               </div>
 
-              {/* Win Rate */}
               <div className="card w-[300px] text-center shrink-0">
                 <p className="text-sm text-accent mb-2">Win Rate</p>
                 <p className="text-6xl font-extrabold text-[#00ffbf]">{dotaStats.winRate}%</p>
@@ -496,7 +374,6 @@ export default function ProfileClient() {
                 </p>
               </div>
 
-              {/* Top Heroes */}
               <div className="card w-[300px] text-center shrink-0">
                 <p className="text-sm text-accent mb-2">Top Heroes</p>
                 <div className="flex flex-col items-center gap-1">
@@ -515,7 +392,6 @@ export default function ProfileClient() {
           {/* Languages & Preferred Positions */}
           <div className="flex justify-center w-full px-4 py-6">
             <div className="flex w-full max-w-6xl justify-between gap-6">
-              {/* Languages */}
               <div className="w-1/2 glow-panel rounded-2xl border border-cyan-500 p-6">
                 <h2 className="text-lg font-bold text-cyan-400 uppercase text-center mb-4 tracking-wide">
                   {t('profile.languages_spoken')}
@@ -533,7 +409,6 @@ export default function ProfileClient() {
                 </div>
               </div>
 
-              {/* Preferred Positions */}
               <div className="w-1/2 glow-panel rounded-2xl border border-green-500 p-6">
                 <h2 className="text-lg font-bold text-cyan-400 uppercase text-center mb-4 tracking-wide">
                   {t('profile.preferred_positions')}
@@ -555,7 +430,6 @@ export default function ProfileClient() {
 
           {/* Team & Recent Matches */}
           <div className="flex flex-col md:flex-row gap-6 justify-between">
-            {/* Team Info */}
             {user.team && (
               <div className="glow-panel p-6 rounded-2xl border border-cyan-500 w-full md:max-w-md">
                 <h2 className="text-lg font-bold text-cyan-400 uppercase mb-4 tracking-wide">
@@ -574,13 +448,11 @@ export default function ProfileClient() {
               </div>
             )}
 
-            {/* Recent Matches */}
             <div className="w-full max-w-[720px] mx-auto glow-panel p-5 rounded-2xl border border-cyan-500">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-bold text-cyan-400 uppercase tracking-wide">
                   {t('profile.recent_matches')}
                 </h2>
-
                 <a
                   href="https://www.opendota.com/players/YOUR_ID"
                   target="_blank"
@@ -602,27 +474,12 @@ export default function ProfileClient() {
                       key={index}
                       className="flex justify-between items-center bg-[#0a0a0a] border border-gray-700 rounded-lg px-4 py-3"
                     >
-                      {/* Left: Hero */}
                       <div className="flex items-center gap-3">
-                        <Image
-                          src={imageUrl}
-                          alt={match.hero}
-                          width={40}
-                          height={40}
-                          className="rounded-md"
-                        />
-                        <span className="text-white text-sm font-semibold">
-                          {match.hero}
-                        </span>
+                        <Image src={imageUrl} alt={match.hero} width={40} height={40} className="rounded-md" />
+                        <span className="text-white text-sm font-semibold">{match.hero}</span>
                       </div>
-
-                      {/* Right: Result + Link */}
                       <div className="flex flex-col items-end text-right">
-                        <span
-                          className={`text-base font-bold ${
-                            match.result === 'Win' ? 'text-green-500' : 'text-red-500'
-                          }`}
-                        >
+                        <span className={`text-base font-bold ${match.result === 'Win' ? 'text-green-500' : 'text-red-500'}`}>
                           {match.result}
                         </span>
                         <a
@@ -641,7 +498,6 @@ export default function ProfileClient() {
             </div>
           </div>
 
-          {/* Logout */}
           <div className="text-center pt-6 mb-[4.8rem]">
             <button onClick={handleLogout} className="logout-button">
               {t('profile.logout')}
