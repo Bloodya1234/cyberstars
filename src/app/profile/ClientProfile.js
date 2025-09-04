@@ -9,6 +9,26 @@ import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, updateDoc, getFirestore } from 'firebase/firestore';
 import { app } from '@/firebase';
 import ClientLayout from '@/components/ClientLayout';
+// ... твои импорты выше
+
+
+// внутри компонента ProfileClient, рядом с остальными useEffect:
+useEffect(() => {
+  if (loading) return;     // ждём, пока подтянется юзер
+  if (!user) return;
+
+  // 1) нет подключённого Discord — ведём на шаг авторизации дискорда
+  if (!user.discord || !user.discord.id) {
+    router.replace('/connect-discord');
+    return;
+  }
+
+  // 2) Discord уже привязан, но юзер не в сервере — ведём на инвайт/чек
+  if (user.joinedDiscordServer !== true) {
+    router.replace('/join-discord');
+    return;
+  }
+}, [loading, user, router]);
 
 function ErrorBoundary({ children }) {
   const [{ error, info }, setErr] = useState({ error: null, info: null });
