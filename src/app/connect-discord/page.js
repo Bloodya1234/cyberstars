@@ -1,3 +1,4 @@
+// src/app/connect-discord/page.js
 import { redirectIfReadyToProfile } from '@/lib/redirect-to-profile.server';
 import ConnectDiscordClient from './ConnectDiscordClient';
 
@@ -7,6 +8,7 @@ export default async function Page() {
   await redirectIfReadyToProfile();
   return <ConnectDiscordClient />;
 }
+
 
 
 import { useEffect, useState, useCallback } from 'react';
