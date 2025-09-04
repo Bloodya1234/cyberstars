@@ -75,21 +75,15 @@ export default function JoinDiscordClient() {
       <h1 className="text-3xl font-bold mb-3">Join our Discord</h1>
       <p className="opacity-80 mb-6">Please join the Discord server to finish your setup.</p>
 
-      <div className="flex flex-col gap-3">
-        <button
-          onClick={openInviteAndGoProfile}
-          className="px-6 py-3 rounded bg-indigo-600 text-white hover:bg-indigo-700"
-        >
-          Open Discord Invite & Go to Profile
-        </button>
+   <div className="flex flex-col gap-3">
+  <button
+    onClick={openInviteAndGoProfile}
+    className="px-6 py-3 rounded bg-indigo-600 text-white hover:bg-indigo-700"
+  >
+    Open Discord Invite & Go to Profile
+  </button>
+</div>
 
-        <button
-          onClick={openInviteAndWait}
-          disabled={!me?.discord?.id || checking}
-          className="px-6 py-3 rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
-        >
-        </button>
-      </div>
     </main>
   );
 }
