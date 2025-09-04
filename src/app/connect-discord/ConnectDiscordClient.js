@@ -5,24 +5,28 @@ import { useEffect, useState, useCallback } from 'react';
 
 function b64(obj) {
   try {
-    return btoa(JSON.stringify(obj));
+    return typeof window !== 'undefined'
+      ? btoa(JSON.stringify(obj))
+      : Buffer.from(JSON.stringify(obj)).toString('base64');
   } catch {
     return '';
   }
 }
 
 export default function ConnectDiscordClient() {
-  const [uid, setUid] = useState(null);
+  const [steamId64, setSteamId64] = useState(null);
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Подтягиваем текущего пользователя, чтобы положить uid в state Discord OAuth
+  // Подтягиваем данные пользователя (если нужно класть в state)
   useEffect(() => {
     (async () => {
       try {
         const r = await fetch('/api/user-info', { cache: 'no-store', credentials: 'include' });
         if (!r.ok) return;
-        const j = await r.json();
-        setUid(j?.uid || null);
+        const u = await r.json();
+        setSteamId64(u?.uid?.replace(/^steam:/, '') || null);
+        setToken(null); // если хочешь — подтяни ещё что-то
       } catch {}
     })();
   }, []);
@@ -31,10 +35,10 @@ export default function ConnectDiscordClient() {
     setLoading(true);
     const origin = window.location.origin;
     const redirectUri = encodeURIComponent(`${origin}/api/discord/callback`);
-    const state = encodeURIComponent(b64({ steamId: uid || '' }));
+    const state = encodeURIComponent(b64({ steamId: steamId64 ? `steam:${steamId64}` : '' }));
 
     const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
-    const scope = encodeURIComponent('identify'); // добавь/измени при необходимости
+    const scope = encodeURIComponent('identify');
 
     const url =
       `https://discord.com/api/oauth2/authorize` +
@@ -45,7 +49,7 @@ export default function ConnectDiscordClient() {
       `&state=${state}`;
 
     window.location.href = url;
-  }, [uid]);
+  }, [steamId64]);
 
   return (
     <main className="min-h-[60vh] flex flex-col items-center justify-center gap-4 p-8 text-center">
