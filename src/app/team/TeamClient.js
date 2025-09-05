@@ -247,6 +247,22 @@ export default function TeamClient() {
                   )}
                 </div>
               </div>
+{/* Invite link (для капитана) */}
+{isCaptain && (
+  <div className="mt-4">
+    <p className="text-sm text-gray-400 mb-1">Invite your friends:</p>
+    <input
+      type="text"
+      readOnly
+      value={`${typeof window !== 'undefined' ? window.location.origin : ''}/login?inviteTeam=${team.id}`}
+      className="w-full px-3 py-2 rounded bg-black/40 border border-cyan-600 text-sm"
+      onFocus={(e) => e.target.select()}
+    />
+    <p className="text-xs text-gray-500 mt-1">
+      Share this link — new users will auto-get an invite to your team after login.
+    </p>
+  </div>
+)}
 
               <div className="flex items-center gap-3">
                 {isCaptain ? (
