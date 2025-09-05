@@ -1,3 +1,4 @@
+// src/app/find/FindClient.js
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -12,6 +13,16 @@ import Image from 'next/image';
 
 const db = getFirestore(app);
 const auth = getAuth(app);
+
+// ----- Хелпер: строим корректный инвайт-линк -----
+function buildInviteLink(teamId) {
+  // пробуем BASE_URL из env, иначе берём текущий origin (и убираем хвостовые '/')
+  const base =
+    (process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : ''))
+      .replace(/\/+$/, '');
+  // ведём на steam-login, чтобы сразу запустился Steam OAuth и мы поймали inviteTeam
+  return `${base}/steam-login?inviteTeam=${encodeURIComponent(teamId)}`;
+}
 
 async function fetchWinRateAndRank(uid) {
   try {
@@ -111,23 +122,32 @@ export default function FindClient() {
     fetchData();
   }, []);
 
+  // --- Отправка инвайта через бот-сервер с правильной ссылкой ---
   const handleSendInvite = async (target) => {
     if (!team || !isCaptain) return;
     const discordId = target.discord?.id || target.discordId;
     if (!discordId) return;
 
-    const res = await fetch('/api/send-invite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        recipientDiscordId: discordId,
-        teamName: team.name,
-        inviteLink: `${window.location.origin}/login?inviteTeam=${team.id}`,
-      }),
-    });
+    try {
+      const inviteLink = buildInviteLink(team.id); // ← ключевая правка
 
-    if (res.ok) alert('Invite sent!');
-    else alert('Failed to send invite.');
+      const res = await fetch('/api/send-invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipientDiscordId: discordId,
+          teamName: team.name || 'team',
+          inviteLink,
+        }),
+      });
+
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j?.error || 'Failed to send invite');
+      alert('Invite sent!');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to send invite.');
+    }
   };
 
   const handleJoinRequest = async (teamToJoin) => {
@@ -194,7 +214,6 @@ export default function FindClient() {
                   )}
                 </div>
 
-                {/* Список участников если он уже лежит в документе */}
                 {teamItem.members?.length > 0 && (
                   <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                     {teamItem.members.map(member => (

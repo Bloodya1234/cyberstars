@@ -8,7 +8,9 @@ import {
   ChannelType,
 } from 'discord.js';
 
-// Инициализация клиента Discord
+// ============================
+// Discord client
+// ============================
 export const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -20,7 +22,45 @@ export const client = new Client({
 
 let botStarted = false;
 
-/** Гарантируем логин бота (лениво, один раз) */
+// ============================
+// Helpers: base URL + invite link
+// ============================
+function getBaseUrl() {
+  let url =
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    process.env.BOT_PUBLIC_BASE_URL ||
+    process.env.VERCEL_URL ||
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+    'http://localhost:3000';
+
+  // на Vercel переменные часто приходят без схемы
+  if (url && !/^https?:\/\//i.test(url)) {
+    url = `https://${url}`;
+  }
+  return String(url).replace(/\/+$/, '');
+}
+
+export function buildTeamInviteLink(teamId) {
+  const base = getBaseUrl();
+  // ведём на steam-login, чтобы сразу стартовал Steam OAuth и мы поймали inviteTeam
+  return `${base}/steam-login?inviteTeam=${encodeURIComponent(teamId)}`;
+}
+
+export function buildInviteMessage(teamName, teamIdOrLink) {
+  const link =
+    /^https?:\/\//i.test(String(teamIdOrLink))
+      ? teamIdOrLink
+      : buildTeamInviteLink(String(teamIdOrLink));
+
+  return [
+    `You have been invited to the team **${teamName || 'team'}**.`,
+    `Join here: ${link}`,
+  ].join('\n');
+}
+
+// ============================
+// Bot login
+// ============================
 export async function ensureBotLoggedIn() {
   if (botStarted) return;
 
@@ -39,7 +79,10 @@ export async function ensureBotLoggedIn() {
   }
 }
 
-/** Отправка личного сообщения пользователю */
+// ============================
+// DM helpers
+// ============================
+/** Отправка личного сообщения пользователю (произвольный текст) */
 export async function sendInviteDM(discordId, messageText) {
   await ensureBotLoggedIn();
   try {
@@ -53,6 +96,15 @@ export async function sendInviteDM(discordId, messageText) {
   }
 }
 
+/** Упрощённый вызов: бот сам соберёт правильную ссылку на вступление по teamId */
+export async function sendTeamInvite(discordId, teamName, teamId) {
+  const message = buildInviteMessage(teamName, teamId);
+  return sendInviteDM(discordId, message);
+}
+
+// ============================
+// Guild membership check
+// ============================
 /** Проверка, состоит ли пользователь в гильдии */
 export async function isUserInGuild(discordId) {
   await ensureBotLoggedIn();
@@ -69,6 +121,9 @@ export async function isUserInGuild(discordId) {
   }
 }
 
+// ============================
+// Server invite via DM
+// ============================
 /** Авто-инвайт на сервер через одноразовую ссылку в DM */
 export async function sendAutoServerInvite(discordId) {
   await ensureBotLoggedIn();
@@ -95,6 +150,9 @@ export async function sendAutoServerInvite(discordId) {
   console.log(`📨 Auto-invite sent to ${user.tag || discordId}`);
 }
 
+// ============================
+// Team private channel helpers
+// ============================
 /** Создать приватный командный канал */
 export async function createTeamChannel(teamName, memberDiscordIds) {
   await ensureBotLoggedIn();
@@ -216,9 +274,12 @@ export async function deleteTeamChannel(channelId) {
   }
 }
 
-// Логи при готовности
+// ============================
+// Logs
+// ============================
 client.on('ready', () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
+  console.log(`🌍 Public base URL for invites: ${getBaseUrl()}`);
   console.log('📋 Servers:');
   client.guilds.cache.forEach((g) =>
     console.log(`- ${g.name} (${g.id})`)
