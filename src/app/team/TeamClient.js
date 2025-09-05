@@ -22,6 +22,13 @@ const db = getFirestore(app);
 // 5 фикс-слотов под участников
 const MAX_SLOTS = 5;
 const POSITIONS = ['Carry', 'Mid Lane', 'Offlane', 'Support', 'Hard Support'];
+// ——— invite link builder ———
+function buildInviteLink(teamId) {
+  // Берём канонический домен из ENV, иначе — текущий origin
+  const base = (process.env.NEXT_PUBLIC_BASE_URL || window.location.origin).replace(/\/+$/, '');
+  // Ведём на steam-login, чтобы сразу стартовал Steam OAuth и мы поймали inviteTeam
+  return `${base}/steam-login?inviteTeam=${encodeURIComponent(teamId)}`;
+}
 
 // утилита для пересчёта ранга (опционально)
 function formatRank(tier) {
@@ -263,6 +270,19 @@ export default function TeamClient() {
     </p>
   </div>
 )}
+<button
+  onClick={() => {
+    if (!team?.id) return;
+    const link = buildInviteLink(team.id);
+    navigator.clipboard.writeText(link).then(() => {
+      alert('Invite link copied!');
+    });
+  }}
+  className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+>
+  Copy invite link
+</button>
+
 
               <div className="flex items-center gap-3">
                 {isCaptain ? (
