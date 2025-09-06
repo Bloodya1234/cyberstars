@@ -138,48 +138,39 @@ export default function AdminTournamentPage() {
   setError('');
 
   try {
-    // получаем текущего юзера (там должен быть email)
+    // берём текущего юзера
     const meRes = await fetch('/api/user-info', { cache: 'no-store', credentials: 'include' });
     const me = meRes.ok ? await meRes.json() : {};
-    const requesterEmail = me?.email || me?.user?.email || '';
 
     const payload = {
       ...form,
       maxSlots: Number(form.maxSlots),
-      requesterEmail, // <-- важно
+      requesterEmail: me?.email || me?.user?.email || '',
+      requesterUid:   me?.uid   || me?.user?.uid   || '',
     };
 
     const res = await fetch('/api/tournaments/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-      cache: 'no-store',
     });
 
     const data = await res.json().catch(() => ({}));
+
     if (!res.ok) {
-      const msg = data?.details?.join(', ') || data?.error || 'Failed';
-      throw new Error(msg);
+      setError(data?.error || 'Failed to create tournament');
+      return;
     }
 
-    // успех
-    setForm({
-      name: '',
-      type: '1v1',
-      bracket: 'Herald',
-      maxSlots: 8,
-      prize: '',
-      rules: '',
-    });
-
-    // перезагрузка списка
-    const listRes = await fetch('/api/tournaments', { cache: 'no-store' });
-    setTournaments(listRes.ok ? await listRes.json() : []);
-
+    // success
+    setForm({ name: '', type: '1v1', bracket: 'Herald', maxSlots: 8, prize: '', rules: '' });
+    const updated = await fetch('/api/tournaments', { cache: 'no-store' });
+    setTournaments(await updated.json());
   } catch (err) {
     setError(String(err?.message || err));
   }
 };
+
 
 
   const handleDelete = async (id) => {
