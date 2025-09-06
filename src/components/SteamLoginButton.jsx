@@ -6,11 +6,10 @@ export default function SteamLoginButton({ className = '', children = 'Login wit
 
   const handleSteamLogin = () => {
     const inviteTeam = searchParams.get('inviteTeam') || '';
-
     const origin =
       typeof window !== 'undefined'
         ? window.location.origin
-        : (process.env.NEXT_PUBLIC_BASE_URL || 'https://example.com'); // подставь домен, если нужно
+        : (process.env.NEXT_PUBLIC_BASE_URL || 'https://example.com');
 
     const returnToUrl = new URL('/api/steam/return', origin);
     if (inviteTeam) returnToUrl.searchParams.set('inviteTeam', inviteTeam);
