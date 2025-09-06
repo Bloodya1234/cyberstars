@@ -133,42 +133,44 @@ export default function AdminTournamentPage() {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError('');
 
-    try {
-      const payload = { ...form, currentSlots: 0 };
-      const res = await fetch('/api/tournaments/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
+  const payload = { ...form, currentSlots: 0 };
 
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(j?.details?.join(', ') || j?.message || j?.error || 'Failed to create tournament');
-      }
+  try {
+    const res = await fetch('/api/tournaments/create', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    });
 
-      // Обновим список
-      const upd = await fetch('/api/tournaments', { cache: 'no-store' });
-      const list = await upd.json();
-      setTournaments(Array.isArray(list) ? list : []);
+    const data = await res.json().catch(() => ({}));
 
-      // Очистим форму
-      setForm({
-        name: '',
-        type: '1v1',
-        bracket: 'Herald',
-        maxSlots: 8,
-        prize: '',
-        rules: '',
-      });
-    } catch (e) {
-      setError(String(e?.message || e));
+    if (!res.ok) {
+      const errDetails = Array.isArray(data?.details) ? data.details.join(', ') : '';
+      setError(errDetails || data?.message || data?.error || 'Failed to create tournament');
+      return;
     }
-  };
+
+    // успех
+    setForm({
+      name: '',
+      type: '1v1',
+      bracket: 'Herald',
+      maxSlots: 8,
+      prize: '',
+      rules: '',
+    });
+
+    const updated = await fetch('/api/tournaments', { cache: 'no-store' });
+    setTournaments(await updated.json());
+  } catch (err) {
+    setError(`Unexpected error: ${err.message}`);
+  }
+};
+
 
   const handleDelete = async (id) => {
     if (!confirm('Delete this tournament?')) return;
