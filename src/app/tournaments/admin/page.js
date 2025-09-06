@@ -137,21 +137,29 @@ export default function AdminTournamentPage() {
   e.preventDefault();
   setError('');
 
-  const payload = { ...form, currentSlots: 0 };
-
   try {
+    // получаем текущего юзера (там должен быть email)
+    const meRes = await fetch('/api/user-info', { cache: 'no-store', credentials: 'include' });
+    const me = meRes.ok ? await meRes.json() : {};
+    const requesterEmail = me?.email || me?.user?.email || '';
+
+    const payload = {
+      ...form,
+      maxSlots: Number(form.maxSlots),
+      requesterEmail, // <-- важно
+    };
+
     const res = await fetch('/api/tournaments/create', {
       method: 'POST',
-      body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      cache: 'no-store',
     });
 
     const data = await res.json().catch(() => ({}));
-
     if (!res.ok) {
-      const errDetails = Array.isArray(data?.details) ? data.details.join(', ') : '';
-      setError(errDetails || data?.message || data?.error || 'Failed to create tournament');
-      return;
+      const msg = data?.details?.join(', ') || data?.error || 'Failed';
+      throw new Error(msg);
     }
 
     // успех
@@ -164,10 +172,12 @@ export default function AdminTournamentPage() {
       rules: '',
     });
 
-    const updated = await fetch('/api/tournaments', { cache: 'no-store' });
-    setTournaments(await updated.json());
+    // перезагрузка списка
+    const listRes = await fetch('/api/tournaments', { cache: 'no-store' });
+    setTournaments(listRes.ok ? await listRes.json() : []);
+
   } catch (err) {
-    setError(`Unexpected error: ${err.message}`);
+    setError(String(err?.message || err));
   }
 };
 
