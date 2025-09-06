@@ -1,7 +1,15 @@
 // src/app/api/tournaments/route.js
 import { NextResponse } from 'next/server';
-import { getFirestore } from 'firebase-admin/firestore';
-import { initAdminIfNeeded } from '@/lib/firebase-admin'; // твой инициалайзер admin SDK
+// было: import initAdminIfNeeded from '@/lib/firebase-admin' (⛔️ default)
+// нужно:
+import { initAdminIfNeeded, getFirestore } from '@/lib/firebase-admin';
+
+// пример использования:
+const db = getFirestore();
+// или
+initAdminIfNeeded();
+// ... дальше работаешь через admin.firestore() или db
+
 
 export async function GET() {
   try {
