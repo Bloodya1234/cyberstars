@@ -24,6 +24,32 @@ export default function TournamentsClient() {
       const tourRes = await fetch('/api/tournaments', { cache: 'no-store' });
       const tourData = await tourRes.json();
       setTournaments(tourData);
+// внутри TournamentsClient
+async function createTournament(form) {
+  setLoading(true);
+  setError(null);
+  try {
+    const res = await fetch('/api/tournaments/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+      credentials: 'include',
+      cache: 'no-store',
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data?.details?.join(', ') || data?.error || data?.message || 'Failed');
+    }
+
+    alert('Tournament created!');
+    await reloadTournaments();
+  } catch (e) {
+    setError(String(e.message || e));
+  } finally {
+    setLoading(false);
+  }
+}
 
       // узнаём юзера и его док
       const userRes = await fetch('/api/user-info', { credentials: 'include', cache: 'no-store' });
