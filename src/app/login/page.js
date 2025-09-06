@@ -43,10 +43,10 @@ export default function LoginPage() {
           <h1 className="mt-2 text-5xl md:text-7xl font-extrabold tracking-tight text-white drop-shadow-lg">
             CYBERSTARS
           </h1>
-          <p className="mt-4 text-lg md:text-xl text-white/85 max-w-2xl">
-            Love Dota 2? Dream of earning from your skill? You're in the right place. Compete in
-            real-money tournaments with fair matchmaking and smart anti-abuse systems.
-          </p>
+    <p className="mt-4 text-lg md:text-xl text-white/85 max-w-2xl">
+  Love Dota 2? Dream of earning from your skill? You&#39;re in the right place.
+  Compete in real-money tournaments with fair matchmaking and smart anti-abuse systems.
+</p>
 
           <div className="mt-8">
             <SteamLoginButton className="px-6 py-3 text-base">Login with Steam</SteamLoginButton>
@@ -87,11 +87,11 @@ export default function LoginPage() {
           </div>
 
           {/* Footer line with GLHF */}
-          <div className="border-t border-white/10 px-6 py-6 text-center text-white/80 md:px-10">
-            We’ve built a fair and rewarding platform where skill truly pays off. Log in, play hard,
-            and earn real rewards from your passion. <br />
-            <span className="mt-1 inline-block font-bold text-white">GLHF!</span>
-          </div>
+         <div className="border-t ...">
+  We&#39;ve built a fair and rewarding platform where skill truly pays off. Log in, play hard,
+  and earn real rewards from your passion. <br />
+  <span className="mt-1 inline-block font-bold text-white">GLHF!</span>
+</div>
         </div>
       </section>
     </div>
