@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import SteamLoginButton from '@/components/SteamLoginButton';
-import './override.css'; // 👈 подключаем локальный reset
+import './override.css'; // пусть остается — но ниже добавим ещё и inline reset
 
 export const metadata = {
   title: 'Login — CyberStars',
@@ -13,7 +13,23 @@ export const dynamic = 'force-dynamic';
 export default function LoginPage() {
   return (
     <div className="login-scope relative min-h-[100vh]">
-      {/* фон + текстуры */}
+      {/* 🔥 ЖЁСТКИЙ inline-reset. Он подгружается ПОСЛЕ всех стилей и гарантированно отключает рамки/тени. */}
+      <style
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{
+          __html: `
+/* выключаем всё неоновое внутри .login-scope */
+.login-scope *,.login-scope *::before,.login-scope *::after{border:0!important;box-shadow:none!important;outline:0!important;background-image:none!important}
+/* если глобальный layout добавляет header — делаем его невидимым на /login */
+.login-scope header{border:0!important;box-shadow:none!important;background:transparent!important}
+/* разрешаем наши аккуратные рамки на карточках */
+.login-scope .allow-border{border:1px solid rgba(255,255,255,0.10)!important}
+.login-scope .allow-subcard{border:1px solid rgba(255,255,255,0.10)!important;background:rgba(255,255,255,0.05)!important;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+          `,
+        }}
+      />
+
+      {/* LAVA BACKGROUND */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10"
