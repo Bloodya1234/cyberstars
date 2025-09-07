@@ -1,27 +1,5 @@
-// src/app/(auth)/login/page.js
-import dynamic from 'next/dynamic';
 import './override.css';
-
-// Отдельный fallback-компонент (без эмодзи, без странных символов)
-function SteamLoginFallback() {
-  return (
-    <a
-      href="/steam-login"
-      className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-base bg-gradient-to-r from-rose-500 to-orange-500 text-white/90 shadow-lg shadow-rose-900/30"
-    >
-      Login with Steam
-    </a>
-  );
-}
-
-// Динамический импорт кнопки как клиентского компонента
-const SteamLoginButton = dynamic(
-  async () => {
-    const mod = await import('@/components/SteamLoginButton');
-    return mod.default || mod;
-  },
-  { ssr: false, loading: () => <SteamLoginFallback /> }
-);
+import SteamCTA from './SteamCTA.client';
 
 export const metadata = {
   title: 'Login — CyberStars',
@@ -34,31 +12,24 @@ export const dynamic = 'force-dynamic';
 export default function LoginPage() {
   return (
     <div className="login-scope relative min-h-[100vh]">
-      {/* ВАЖНО: reset без сброса background-image, иначе пропадёт «лава» */}
+      {/* Reset без убийства background-image */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
-            .login-scope *,
-            .login-scope *::before,
-            .login-scope *::after {
-              border: 0 !important;
-              box-shadow: none !important;
-              outline: 0 !important;
+            .login-scope *, .login-scope *::before, .login-scope *::after {
+              border:0!important; box-shadow:none!important; outline:0!important;
             }
-            .login-scope .allow-border {
-              border: 1px solid rgba(255,255,255,0.10) !important;
-            }
+            .login-scope .allow-border { border:1px solid rgba(255,255,255,.10)!important; }
             .login-scope .allow-subcard {
-              border: 1px solid rgba(255,255,255,0.10) !important;
-              background: rgba(255,255,255,0.05) !important;
-              -webkit-backdrop-filter: blur(12px);
-              backdrop-filter: blur(12px);
+              border:1px solid rgba(255,255,255,.10)!important;
+              background:rgba(255,255,255,.05)!important;
+              -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
             }
           `,
         }}
       />
 
-      {/* === LAVA BACKGROUND === */}
+      {/* LAVA BACKGROUND */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10"
@@ -75,7 +46,7 @@ export default function LoginPage() {
         />
       </div>
 
-      {/* === HERO === */}
+      {/* HERO */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-14 pb-6">
         <div className="max-w-3xl">
           <p className="text-sm uppercase tracking-[0.2em] text-white/80 drop-shadow">WELCOME TO</p>
@@ -87,18 +58,15 @@ export default function LoginPage() {
             real-money tournaments with fair matchmaking and smart anti-abuse systems.
           </p>
           <div className="mt-6">
-            <SteamLoginButton className="px-6 py-3 text-base">
-              Login with Steam
-            </SteamLoginButton>
+            <SteamCTA className="px-6 py-3 text-base">Login with Steam</SteamCTA>
           </div>
         </div>
       </section>
 
-      {/* === GLASS INFO CARD === */}
+      {/* GLASS INFO CARD */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-14">
         <div className="allow-border rounded-3xl bg-white/5 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.45)]">
           <div className="grid gap-6 p-6 md:p-10 md:grid-cols-2">
-            {/* Game Modes */}
             <div className="allow-subcard rounded-2xl p-6">
               <h3 className="flex items-center gap-2 text-xl font-semibold text-white">
                 <span>🕹️</span> Game Modes
@@ -111,7 +79,6 @@ export default function LoginPage() {
               </ul>
             </div>
 
-            {/* Fair Play */}
             <div className="allow-subcard rounded-2xl p-6">
               <h3 className="flex items-center gap-2 text-xl font-semibold text-white">
                 <span>🧠</span> Fair Play System
