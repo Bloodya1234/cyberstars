@@ -248,3 +248,39 @@ button:focus, a:focus {
   background: rgba(255,255,255,0.05) !important;
   backdrop-filter: blur(12px);
 }
+/* ====== LOGIN PAGE GLOBAL OVERRIDE ======
+   Когда в дереве есть .login-page (локальный layout /login),
+   вырубаем неон и разделители И СНАРУЖИ тоже (header/footer и пр.)
+   ====================================== */
+
+body:has(.login-page) *::before,
+body:has(.login-page) *::after {
+  content: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+  background-image: none !important;
+}
+
+body:has(.login-page) header,
+body:has(.login-page) footer,
+body:has(.login-page) .card,
+body:has(.login-page) .glow-panel,
+body:has(.login-page) .hex-button,
+body:has(.login-page) .logout-button,
+body:has(.login-page) hr {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  outline: 0 !important;
+}
+
+/* На самой странице логина оставляем управляемые рамки */
+body:has(.login-page) .allow-border {
+  border: 1px solid rgba(255,255,255,0.10) !important;
+}
+body:has(.login-page) .allow-subcard {
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  background: rgba(255,255,255,0.05) !important;
+  backdrop-filter: blur(12px);
+}
