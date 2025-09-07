@@ -1,27 +1,37 @@
-/* Сбрасываем все "наследованные" неоновые рамки и тени ТОЛЬКО на /login */
-.login-scope, 
-.login-scope * { 
-  box-shadow: none !important;
-}
+/* ===== /login hard reset (только внутри .login-scope) ===== */
 
-.login-scope *, 
-.login-scope *::before, 
+/* убираем псевдо-элементы, через которые часто рисуются линии */
+.login-scope *::before,
 .login-scope *::after {
+  content: none !important;
   border: 0 !important;
+  box-shadow: none !important;
   outline: 0 !important;
 }
 
-/* Убираем рамки и тени у конкретных глобальных классов, если они встретятся */
+/* тотально выключаем границы/тени/аутлайны/фоны на всём дереве */
+.login-scope,
+.login-scope *,
+.login-scope section,
+.login-scope div,
 .login-scope header,
-.login-scope .card,
-.login-scope .glow-panel,
-.login-scope .hex-button,
-.login-scope .logout-button {
+.login-scope main,
+.login-scope article,
+.login-scope footer {
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+  background-image: none !important;
+}
+
+/* если глобальный header есть в layout — делаем его прозрачным и без линии */
+.login-scope header {
+  background: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
 }
 
-/* Разрешаем аккуратные бордеры на наших стеклянных карточках */
+/* разрешаем аккуратные бордеры только для наших карточек */
 .login-scope .allow-border {
   border: 1px solid rgba(255,255,255,0.10) !important;
 }
