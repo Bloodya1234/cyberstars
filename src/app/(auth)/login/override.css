@@ -1,6 +1,6 @@
-/* Локальные оверрайды только для /login */
+/* Локальный оверрайд только для страницы /login */
 
-/* НИЧЕГО не сбрасываем у background-image — лава должна остаться */
+/* Никаких глобальных «сеток/бордеров» из неона */
 .login-scope *,
 .login-scope *::before,
 .login-scope *::after {
@@ -9,14 +9,12 @@
   outline: 0 !important;
 }
 
-/* Убираем тёмные "линейки" от старого дизайна, если придут из глобалок */
+/* На всякий: скрыть горизонтальные разделители от старого дизайна */
 .login-scope hr,
-.login-scope .divider,
-.login-scope .section-line {
+.login-scope .section-line,
+.login-scope .divider {
   display: none !important;
 }
 
-/* Текст читаемый поверх огня */
-.login-scope {
-  color: #fff;
-}
+/* Читаемость текста поверх лавы */
+.login-scope { color: #fff; }
