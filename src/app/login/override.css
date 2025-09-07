@@ -1,0 +1,33 @@
+/* Сбрасываем все "наследованные" неоновые рамки и тени ТОЛЬКО на /login */
+.login-scope, 
+.login-scope * { 
+  box-shadow: none !important;
+}
+
+.login-scope *, 
+.login-scope *::before, 
+.login-scope *::after {
+  border: 0 !important;
+  outline: 0 !important;
+}
+
+/* Убираем рамки и тени у конкретных глобальных классов, если они встретятся */
+.login-scope header,
+.login-scope .card,
+.login-scope .glow-panel,
+.login-scope .hex-button,
+.login-scope .logout-button {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Разрешаем аккуратные бордеры на наших стеклянных карточках */
+.login-scope .allow-border {
+  border: 1px solid rgba(255,255,255,0.10) !important;
+}
+
+.login-scope .allow-subcard {
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  background: rgba(255,255,255,0.05) !important;
+  backdrop-filter: blur(12px);
+}

@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import SteamLoginButton from '@/components/SteamLoginButton';
+import './override.css'; // 👈 подключаем локальный reset
 
 export const metadata = {
   title: 'Login — CyberStars',
@@ -11,8 +12,8 @@ export const dynamic = 'force-dynamic';
 
 export default function LoginPage() {
   return (
-    <div className="relative min-h-[100vh]">
-      {/* LAVA BACKGROUND */}
+    <div className="login-scope relative min-h-[100vh]">
+      {/* фон + текстуры */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10"
@@ -48,9 +49,9 @@ export default function LoginPage() {
 
       {/* INFO CARD */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-14">
-        <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.45)]">
+        <div className="allow-border rounded-3xl bg-white/5 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.45)]">
           <div className="grid gap-6 p-6 md:p-10 md:grid-cols-2">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-6">
+            <div className="allow-subcard rounded-2xl p-6">
               <h3 className="flex items-center gap-2 text-xl font-semibold text-white">
                 <span>🕹️</span> Game Modes
               </h3>
@@ -62,7 +63,7 @@ export default function LoginPage() {
               </ul>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-6">
+            <div className="allow-subcard rounded-2xl p-6">
               <h3 className="flex items-center gap-2 text-xl font-semibold text-white">
                 <span>🧠</span> Fair Play System
               </h3>
@@ -76,7 +77,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="border-t border-white/10 px-6 py-6 text-center text-white/80 md:px-10">
+          <div className="allow-border border-t px-6 py-6 text-center text-white/80 md:px-10">
             We&#39;ve built a fair and rewarding platform where skill truly pays off. Log in, play
             hard, and earn real rewards from your passion. <br />
             <span className="mt-1 inline-block font-bold text-white">GLHF!</span>
