@@ -2,20 +2,25 @@
 import dynamic from 'next/dynamic';
 import './override.css';
 
-// Подгружаем кнопку как клиентский компонент без SSR,
-// чтобы любой код с window/steam/fb не ломал страницу.
+// Отдельный fallback-компонент (без эмодзи, без странных символов)
+function SteamLoginFallback() {
+  return (
+    <a
+      href="/steam-login"
+      className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-base bg-gradient-to-r from-rose-500 to-orange-500 text-white/90 shadow-lg shadow-rose-900/30"
+    >
+      Login with Steam
+    </a>
+  );
+}
+
+// Динамический импорт кнопки как клиентского компонента
 const SteamLoginButton = dynamic(
-  () => import('@/components/SteamLoginButton'),
-  { ssr: false, loading: () => (
-      <a
-        href="/steam-login"
-        className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-base
-                   bg-gradient-to-r from-rose-500 to-orange-500 text-white/90"
-      >
-        🚀 Login with Steam
-      </a>
-    )
-  }
+  async () => {
+    const mod = await import('@/components/SteamLoginButton');
+    return mod.default || mod;
+  },
+  { ssr: false, loading: () => <SteamLoginFallback /> }
 );
 
 export const metadata = {
@@ -78,7 +83,7 @@ export default function LoginPage() {
             CYBERSTARS
           </h1>
           <p className="mt-4 text-lg md:text-xl text-white/85 max-w-2xl">
-            Love Dota 2? Dream of earning from your skill? You&#39;re in the right place. Compete in
+            Love Dota 2? Dream of earning from your skill? You&apos;re in the right place. Compete in
             real-money tournaments with fair matchmaking and smart anti-abuse systems.
           </p>
           <div className="mt-6">
@@ -122,7 +127,7 @@ export default function LoginPage() {
           </div>
 
           <div className="allow-border border-t px-6 py-6 text-center text-white/80 md:px-10">
-            We&#39;ve built a fair and rewarding platform where skill truly pays off. Log in, play
+            We&apos;ve built a fair and rewarding platform where skill truly pays off. Log in, play
             hard, and earn real rewards from your passion. <br />
             <span className="mt-1 inline-block font-bold text-white">GLHF!</span>
           </div>
