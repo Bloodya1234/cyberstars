@@ -1,6 +1,5 @@
-/* eslint-disable @next/next/no-img-element */
 import SteamLoginButton from '@/components/SteamLoginButton';
-import './override.css'; // локальные ресеты (если нужно)
+import './override.css';
 
 export const metadata = {
   title: 'Login — CyberStars',
@@ -13,29 +12,23 @@ export const dynamic = 'force-dynamic';
 export default function LoginPage() {
   return (
     <div className="login-scope relative min-h-[100vh]">
-      {/* 🔥 Жёсткий inline-reset, чтобы убрать глобальный неон именно на /login */}
       <style
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{
           __html: `
-            .login-scope *,.login-scope *::before,.login-scope *::after {
+            .login-scope *,.login-scope *::before,.login-scope *::after{
               border:0!important; box-shadow:none!important; outline:0!important; background-image:none!important;
             }
-            .login-scope header,.login-scope footer, body:has(.login-page) header, body:has(.login-page) footer {
-              display:none!important;
-            }
-            .login-scope .allow-border { border:1px solid rgba(255,255,255,0.1)!important; }
-            .login-scope .allow-subcard {
-              border:1px solid rgba(255,255,255,0.1)!important;
+            .login-scope .allow-border{border:1px solid rgba(255,255,255,0.10)!important}
+            .login-scope .allow-subcard{
+              border:1px solid rgba(255,255,255,0.10)!important;
               background:rgba(255,255,255,0.05)!important;
-              -webkit-backdrop-filter:blur(12px);
-              backdrop-filter:blur(12px);
+              -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px)
             }
           `,
         }}
       />
 
-      {/* === LAVA BACKGROUND === */}
+      {/* LAVA BACKGROUND */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10"
@@ -52,7 +45,7 @@ export default function LoginPage() {
         />
       </div>
 
-      {/* === HERO === */}
+      {/* HERO */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-14 pb-6">
         <div className="max-w-3xl">
           <p className="text-sm uppercase tracking-[0.2em] text-white/80 drop-shadow">WELCOME TO</p>
@@ -69,11 +62,10 @@ export default function LoginPage() {
         </div>
       </section>
 
-      {/* === INFO CARD === */}
+      {/* INFO CARD */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-14">
         <div className="allow-border rounded-3xl bg-white/5 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.45)]">
           <div className="grid gap-6 p-6 md:p-10 md:grid-cols-2">
-            {/* Game Modes */}
             <div className="allow-subcard rounded-2xl p-6">
               <h3 className="flex items-center gap-2 text-xl font-semibold text-white">
                 <span>🕹️</span> Game Modes
@@ -86,7 +78,6 @@ export default function LoginPage() {
               </ul>
             </div>
 
-            {/* Fair Play */}
             <div className="allow-subcard rounded-2xl p-6">
               <h3 className="flex items-center gap-2 text-xl font-semibold text-white">
                 <span>🧠</span> Fair Play System
