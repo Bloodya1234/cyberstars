@@ -1,1 +1,22 @@
-/* login local overrides */
+/* Локальные оверрайды только для /login */
+
+/* НИЧЕГО не сбрасываем у background-image — лава должна остаться */
+.login-scope *,
+.login-scope *::before,
+.login-scope *::after {
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+}
+
+/* Убираем тёмные "линейки" от старого дизайна, если придут из глобалок */
+.login-scope hr,
+.login-scope .divider,
+.login-scope .section-line {
+  display: none !important;
+}
+
+/* Текст читаемый поверх огня */
+.login-scope {
+  color: #fff;
+}

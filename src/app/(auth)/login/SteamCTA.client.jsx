@@ -2,29 +2,29 @@
 
 import dynamic from 'next/dynamic';
 
-// Лоадер на время загрузки кнопки
-function SteamLoginFallback({ className, children }) {
+// Фолбэк на время загрузки
+function Fallback({ className, children }) {
   return (
     <a
       href="/steam-login"
       className={
-        (className ?? '') +
-        ' inline-flex items-center gap-2 rounded-full px-6 py-3 text-base ' +
-        'bg-gradient-to-r from-rose-500 to-orange-500 text-white/90 shadow-lg shadow-rose-900/30'
+        `inline-flex items-center gap-2 rounded-full px-6 py-3 font-semibold
+         bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-lg
+         shadow-rose-900/30 transition-transform hover:scale-[1.03] ` + (className ?? '')
       }
     >
-      {children ?? 'Login with Steam'}
+      🚀 {children ?? 'Login with Steam'}
     </a>
   );
 }
 
-// Подгружаем реальную кнопку как клиентский компонент
+// Реальная кнопка из проекта, грузим без SSR
 const SteamLoginButton = dynamic(
   async () => {
-    const m = await import('@/components/SteamLoginButton');
-    return m.default || m;
+    const mod = await import('@/components/SteamLoginButton');
+    return mod.default || mod;
   },
-  { ssr: false, loading: () => <SteamLoginFallback /> }
+  { ssr: false, loading: () => <Fallback /> }
 );
 
 export default function SteamCTA({ className, children }) {
