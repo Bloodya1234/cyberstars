@@ -13,24 +13,32 @@ export const dynamic = 'force-dynamic';
 export default function LoginPage() {
   return (
     <div className="login-scope relative min-h-[100vh]">
-      {/* Жёсткий inline-reset внутри логина */}
+      {/* ✅ Правильный reset: НЕ трогаем background-image, иначе пропадает лава */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
-            .login-scope *,.login-scope *::before,.login-scope *::after{
-              border:0!important; box-shadow:none!important; outline:0!important; background-image:none!important;
+            .login-scope *,
+            .login-scope *::before,
+            .login-scope *::after {
+              border: 0 !important;
+              box-shadow: none !important;
+              outline: 0 !important;
             }
-            .login-scope .allow-border{border:1px solid rgba(255,255,255,0.10)!important}
-            .login-scope .allow-subcard{
-              border:1px solid rgba(255,255,255,0.10)!important;
-              background:rgba(255,255,255,0.05)!important;
-              -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px)
+            /* Разрешаем аккуратные бордеры для новых карточек */
+            .login-scope .allow-border {
+              border: 1px solid rgba(255,255,255,0.10) !important;
+            }
+            .login-scope .allow-subcard {
+              border: 1px solid rgba(255,255,255,0.10) !important;
+              background: rgba(255,255,255,0.05) !important;
+              -webkit-backdrop-filter: blur(12px);
+              backdrop-filter: blur(12px);
             }
           `,
         }}
       />
 
-      {/* LAVA BACKGROUND */}
+      {/* 🔥 LAVA BACKGROUND (теперь не будет «съедаться» reset'ом) */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10"
