@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export default function LoginPage() {
   return (
     <div className="relative min-h-[100vh]">
-      {/* --- LAVA BACKGROUND --- */}
+      {/* LAVA BACKGROUND */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10"
@@ -29,15 +29,8 @@ export default function LoginPage() {
         />
       </div>
 
-      {/* --- TOP RIGHT: Steam button --- */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-5">
-        <div className="flex items-center justify-end gap-3">
-          <SteamLoginButton />
-        </div>
-      </div>
-
-      {/* --- HERO --- */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-10 pb-6">
+      {/* HERO */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-14 pb-6">
         <div className="max-w-3xl">
           <p className="text-sm uppercase tracking-[0.2em] text-white/80 drop-shadow">WELCOME TO</p>
           <h1 className="mt-2 text-5xl md:text-7xl font-extrabold tracking-tight text-white drop-shadow-lg">
@@ -53,11 +46,10 @@ export default function LoginPage() {
         </div>
       </section>
 
-      {/* --- INFO CARD --- */}
+      {/* INFO CARD */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-14">
         <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.45)]">
           <div className="grid gap-6 p-6 md:p-10 md:grid-cols-2">
-            {/* Game Modes */}
             <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-6">
               <h3 className="flex items-center gap-2 text-xl font-semibold text-white">
                 <span>🕹️</span> Game Modes
@@ -70,7 +62,6 @@ export default function LoginPage() {
               </ul>
             </div>
 
-            {/* Fair Play */}
             <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-6">
               <h3 className="flex items-center gap-2 text-xl font-semibold text-white">
                 <span>🧠</span> Fair Play System
