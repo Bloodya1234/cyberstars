@@ -31,7 +31,6 @@ a {
   color: var(--accent);
   transition: color 0.3s;
 }
-
 a:hover {
   color: var(--foreground);
   text-shadow: 0 0 6px var(--accent);
@@ -43,24 +42,20 @@ header {
   border-bottom: 1px solid var(--accent);
   box-shadow: 0 0 10px var(--accent);
 }
-
 header > div {
   display: flex !important;
   flex-direction: row !important;
 }
-
 nav {
   display: flex !important;
   margin-left: auto !important;
 }
-
 .nav-link {
   padding: 0.25rem 0.5rem;
   color: var(--accent);
   transition: all 0.2s ease-in-out;
   text-decoration: none;
 }
-
 .nav-link:hover {
   color: var(--foreground);
   text-shadow: 0 0 6px var(--accent);
@@ -80,7 +75,6 @@ nav {
   box-shadow: 0 0 12px rgba(0, 255, 229, 0.1), 0 0 24px rgba(0, 255, 229, 0.05);
   transition: transform 0.2s ease-in-out, box-shadow 0.2s;
 }
-
 .card:hover {
   transform: translateY(-2px);
   box-shadow: 0 0 16px var(--accent), 0 0 30px var(--accent);
@@ -105,7 +99,6 @@ nav {
   box-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
   animation: pulseGlow 2.5s infinite ease-in-out;
 }
-
 .glow-button:hover {
   background: var(--accent);
   color: black;
@@ -114,26 +107,13 @@ nav {
 }
 
 /* Glow color variables */
-.glow-green {
-  --accent: #00ffc3;
-  color: #00ffc3;
-}
-.glow-red {
-  --accent: #ff0066;
-  color: #ff0066;
-}
-.glow-orange {
-  --accent: #ffae00;
-  color: #ffae00;
-}
+.glow-green { --accent: #00ffc3; color: #00ffc3; }
+.glow-red   { --accent: #ff0066; color: #ff0066; }
+.glow-orange{ --accent: #ffae00; color: #ffae00; }
 
 @keyframes pulseGlow {
-  0%, 100% {
-    box-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
-  }
-  50% {
-    box-shadow: 0 0 20px var(--accent), 0 0 40px var(--accent);
-  }
+  0%, 100% { box-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent); }
+  50%      { box-shadow: 0 0 20px var(--accent), 0 0 40px var(--accent); }
 }
 
 /* === Logout Button Style === */
@@ -155,7 +135,6 @@ nav {
   box-shadow: 0 0 10px #ff66c4, 0 0 20px #ff66c4;
   transition: all 0.3s ease;
 }
-
 .logout-button:hover {
   background-color: #ff66c4;
   color: #0a0a0a;
@@ -164,13 +143,10 @@ nav {
 }
 
 /* === Section spacing === */
-.section {
-  margin-bottom: 3rem;
-}
+.section { margin-bottom: 3rem; }
 
 /* === Accessibility Fixes === */
-button:focus,
-a:focus {
+button:focus, a:focus {
   outline: 2px dashed var(--accent);
   outline-offset: 4px;
 }
@@ -186,7 +162,6 @@ a:focus {
     inset 0 0 10px #00eaff;
   animation: pulseAvatarGlow 3s ease-in-out infinite;
 }
-
 @keyframes pulseAvatarGlow {
   0%, 100% {
     box-shadow:
@@ -213,19 +188,16 @@ a:focus {
   color: #fff;
   transition: all 0.3s ease;
 }
-
 .hex-button:hover {
   box-shadow: 0 0 6px #00ffe5, 0 0 12px #00ffe5;
   border-color: #00ffe5;
 }
-
 .hex-button.active-cyan {
   background-color: rgba(0, 255, 227, 0.1);
   color: #00ffe5;
   border-color: #00ffe5;
   box-shadow: 0 0 10px #00ffe5;
 }
-
 .hex-button.active-green {
   background-color: rgba(0, 255, 195, 0.1);
   color: #00ffc3;
@@ -239,4 +211,40 @@ a:focus {
   box-shadow: 0 0 10px #00ffff40, inset 0 0 6px #00ffff20;
   border-radius: 1rem;
   padding: 1rem;
+}
+
+/* ===========================================================
+   LOGIN OVERRIDES — отключаем неоновые рамки/тени ТОЛЬКО на /login
+   Требование: контент страницы логина обёрнут в <div class="login-scope">…</div>
+   (это уже сделано в нашем src/app/login/page.js)
+   =========================================================== */
+
+.login-scope,
+.login-scope * { box-shadow: none !important; }
+
+.login-scope *,
+.login-scope *::before,
+.login-scope *::after {
+  border: 0 !important;
+  outline: 0 !important;
+}
+
+/* На всякий случай глушим конкретные глобальные классы внутри /login */
+.login-scope header,
+.login-scope .card,
+.login-scope .glow-panel,
+.login-scope .hex-button,
+.login-scope .logout-button {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Разрешаем аккуратные бордеры там, где это часть нового дизайна */
+.login-scope .allow-border {
+  border: 1px solid rgba(255,255,255,0.10) !important;
+}
+.login-scope .allow-subcard {
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  background: rgba(255,255,255,0.05) !important;
+  backdrop-filter: blur(12px);
 }
