@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 export default function AuthLayout({ children }) {
   return (
     <>
+      {/* Глобально глушим хедер/футер и декорации только в auth-группе */}
       <style
         dangerouslySetInnerHTML={{
           __html: `

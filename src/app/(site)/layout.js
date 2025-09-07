@@ -10,11 +10,9 @@ export const metadata = {
 export default function SiteLayout({ children }) {
   return (
     <div className="site-layout">
-      {/* === Header (неон, как раньше) === */}
+      {/* === Header (как был, с неоном) === */}
       <header className="px-6 py-4 flex items-center justify-between">
-        <div className="text-glow font-bold text-xl tracking-wide">
-          CYBERSTARS
-        </div>
+        <div className="text-glow font-bold text-xl tracking-wide">CYBERSTARS</div>
         <nav className="flex space-x-6">
           <Link href="/" className="nav-link">Home</Link>
           <Link href="/tournaments" className="nav-link">Tournaments</Link>
