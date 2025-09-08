@@ -19,20 +19,20 @@ export default function LoginPage() {
         backgroundPosition: 'center',
       }}
     >
-      {/* CTA: фиксированно справа сверху */}
+      {/* CTA */}
       <SteamCTA className="fixed right-6 top-6 z-50" />
 
       {/* HERO */}
       <section className="relative z-10 max-w-7xl px-6 pt-24">
-        <p className="text-left text-[24px] md:text-[28px] uppercase tracking-[0.28em] text-white/85 drop-shadow">
-          WELCOME TO
-        </p>
-        <h1 className="mt-1 text-left font-extrabold leading-[0.95] drop-shadow-lg
-                       text-[92px] md:text-[140px] lg:text-[180px]">
-          CYBERSTARS
+        <h1
+          className="text-left font-extrabold leading-[1.05] drop-shadow-lg
+                     text-[92px] md:text-[140px] lg:text-[180px] uppercase"
+        >
+          <div>WELCOME TO</div>
+          <div>CYBERSTARS</div>
         </h1>
 
-        <p className="mt-6 max-w-3xl text-left text-[16px] md:text-[20px] text-white/90 drop-shadow">
+        <p className="mt-8 max-w-3xl text-left text-[18px] md:text-[22px] text-white/90 drop-shadow">
           Compete in Dota 2 tournaments; earn prizes and fun rewards
         </p>
       </section>
