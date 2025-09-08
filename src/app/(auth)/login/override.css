@@ -1,20 +1,12 @@
-/* Только для /login — чтобы старые бордеры/линии не мешали */
-.login-scope *,
-.login-scope *::before,
-.login-scope *::after {
-  border: 0 !important;
-  box-shadow: none !important;
-  outline: 0 !important;
+/* Позиция и приоритет нашей кнопки */
+#steam-login-cta {
+  position: fixed !important;
+  top: 1.5rem !important;     /* 24px */
+  right: 1.5rem !important;
+  z-index: 100 !important;
 }
 
-.login-scope hr,
-.login-scope .section-line,
-.login-scope .divider {
-  display: none !important;
-}
-
-.login-scope { color: #fff; }
-/* Скрыть любые кнопки "Login with Steam" в хедере только на этой странице */
-.login-scope header a[href="/steam-login"] {
+/* Скрыть все прочие кнопки steam-login на странице (например из хедера) */
+.login-scope a[href="/steam-login"]:not(#steam-login-cta) {
   display: none !important;
 }
