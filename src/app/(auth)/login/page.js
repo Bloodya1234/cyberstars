@@ -38,16 +38,12 @@ export default function LoginPage() {
       </section>
 
       {/* INFO CARDS */}
-      <section className="relative z-10 max-w-7xl px-6 pb-24 space-y-6">
-        {/* Карточка: Game Modes */}
-       {/* Карточка: Game Modes */}
-{/* Карточка: Game Modes */}
-{/* Карточка: Game Modes */}
-<div className="lava-card px-6 py-4 w-full max-w-[600px] border-2 border-orange-500 rounded-xl">
-  <h3 className="text-4xl font-bold mb-4 flex items-center gap-2">
-    <span className="text-5xl">🔥</span> Game Modes
+      {/* Карточка: Game Modes */}
+<div className="lava-card p-6 md:p-8 mt-6 w-full max-w-[880px]">
+  <h3 className="text-3xl font-bold mb-4 flex items-center gap-2">
+    <span>🔥</span> Game Modes
   </h3>
-  <ul className="space-y-3 text-2xl md:text-3xl text-white">
+  <ul className="space-y-4 text-2xl md:text-3xl text-white/95">
     <li>⚔️ 1v1 Solo Ranked Matches</li>
     <li>🛡️ 5v5 Classic Ranked Games</li>
     <li>⚡ 5v5 Turbo Mode</li>
@@ -56,11 +52,11 @@ export default function LoginPage() {
 </div>
 
 {/* Карточка: Fair Play System */}
-<div className="lava-card px-6 py-4 w-full max-w-[600px] border-2 border-pink-500 rounded-xl mt-6">
-  <h3 className="text-4xl font-bold mb-4 flex items-center gap-2">
-    <span className="text-5xl">🧠</span> Fair Play System
+<div className="lava-card p-6 md:p-8 mt-6 w-full max-w-[880px]">
+  <h3 className="text-3xl font-bold mb-4 flex items-center gap-2">
+    <span>🧠</span> Fair Play System
   </h3>
-  <ul className="space-y-3 text-2xl md:text-3xl text-white">
+  <ul className="space-y-4 text-2xl md:text-3xl text-white/95">
     <li>📊 MMR bracket-based matchmaking</li>
     <li>🚫 Smurf & abuse prevention built-in</li>
     <li>🕵️‍♂️ 200+ ranked games from same IP</li>
@@ -69,10 +65,6 @@ export default function LoginPage() {
   </ul>
 </div>
 
-
-
-
-      </section>
     </div>
   );
 }
