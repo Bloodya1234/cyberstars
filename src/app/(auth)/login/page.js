@@ -14,28 +14,30 @@ export default function LoginPage() {
     <div
       className="login-scope relative min-h-[100vh] overflow-hidden text-white"
       style={{
-        backgroundImage: 'url("/dota-bg.png")', // <-- твой фон
+        backgroundImage: 'url("/dota-bg.png")', // твой фон из /public
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
     >
-      {/* ===== Кнопка Steam (правый верх) ===== */}
-      <div className="absolute right-6 top-6 z-20">
-        <SteamCTA />
-      </div>
+      {/* Кнопка Steam: фиксированно в правом верхнем углу */}
+      <SteamCTA className="fixed right-6 top-6 z-50" />
 
-      {/* ===== Большой текст ===== */}
-      <section className="relative z-10 max-w-7xl px-6 pt-28">
-        <h1 className="text-[64px] md:text-[100px] lg:text-[140px] font-extrabold leading-tight drop-shadow-lg text-left">
+      {/* HERO */}
+      <section className="relative z-10 max-w-7xl px-6 pt-24">
+        <p className="text-[14px] md:text-[16px] uppercase tracking-[0.25em] text-white/85 drop-shadow text-left">
+          WELCOME TO
+        </p>
+        <h1 className="mt-2 text-left font-extrabold leading-[0.95] drop-shadow-lg
+                       text-[72px] md:text-[120px] lg:text-[164px]">
           CYBERSTARS
         </h1>
-        <p className="mt-6 max-w-2xl text-lg md:text-2xl text-white/90 text-left drop-shadow">
+        <p className="mt-6 max-w-2xl text-left text-[16px] md:text-[20px] text-white/90 drop-shadow">
           Compete in Dota 2 tournaments; earn prizes and fun rewards
         </p>
       </section>
 
-      {/* ===== Карточка с инфой ===== */}
-      <section className="relative z-10 mx-auto max-w-5xl px-6 mt-16 pb-20">
+      {/* Карточка с инфой */}
+      <section className="relative z-10 mx-auto max-w-5xl px-6 mt-14 pb-20">
         <div className="rounded-2xl bg-black/60 backdrop-blur-lg p-8 shadow-lg">
           {/* Game Modes */}
           <div>
