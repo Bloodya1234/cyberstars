@@ -19,17 +19,17 @@ export default function LoginPage() {
         backgroundPosition: 'center',
       }}
     >
-      {/* НАША кнопка (фиксировано справа сверху) */}
+      {/* CTA: фиксированно справа сверху */}
       <SteamCTA className="fixed right-6 top-6 z-50" />
 
       {/* HERO */}
       <section className="relative z-10 max-w-7xl px-6 pt-24">
-        <h1
-          className="text-left font-extrabold leading-[0.95] drop-shadow-lg
-                     text-[72px] md:text-[120px] lg:text-[160px]"
-        >
-          <span className="align-baseline">WELCOME TO&nbsp;</span>
-          <span className="align-baseline">CYBERSTARS</span>
+        <p className="text-left text-[24px] md:text-[28px] uppercase tracking-[0.28em] text-white/85 drop-shadow">
+          WELCOME TO
+        </p>
+        <h1 className="mt-1 text-left font-extrabold leading-[0.95] drop-shadow-lg
+                       text-[92px] md:text-[140px] lg:text-[180px]">
+          CYBERSTARS
         </h1>
 
         <p className="mt-6 max-w-3xl text-left text-[16px] md:text-[20px] text-white/90 drop-shadow">
@@ -37,7 +37,7 @@ export default function LoginPage() {
         </p>
       </section>
 
-      {/* ИНФО-КАРТОЧКА */}
+      {/* INFO CARD */}
       <section className="relative z-10 mx-auto max-w-5xl px-6 mt-14 pb-20">
         <div className="rounded-2xl bg-black/60 backdrop-blur-lg p-8 shadow-lg">
           <div>
