@@ -37,39 +37,50 @@ export default function LoginPage() {
         </p>
       </section>
 
-           {/* INFO CARDS — glass + lava glow */}
-      <section className="relative z-10 mx-auto max-w-6xl px-6 mt-14 pb-24">
-        <div className="grid gap-6 md:gap-8 md:grid-cols-2">
-          {/* Card 1 */}
-          <div className="glass-card lava-border p-6 md:p-8">
-            <div className="flex items-center gap-3">
-              <div className="badge-lava">🔥</div>
-              <h3 className="text-xl md:text-2xl font-semibold">Game Modes</h3>
-            </div>
+               {/* INFO — glass cards with lava gradient border */}
+      <section className="relative z-10 px-4 sm:px-6 lg:px-8 mt-6 md:mt-10">
+        {/* Вся колонка слева, фиксированная ширина, чтобы не превращалось в «полосу» */}
+        <div className="max-w-[720px] space-y-8">
 
-            <ul className="mt-5 space-y-2 text-white/90 text-base md:text-lg leading-relaxed">
-              <li>⚔️ 1v1 Solo Ranked Matches</li>
-              <li>🛡️ 5v5 Classic Ranked Games</li>
-              <li>⚡ 5v5 Turbo Mode</li>
-              <li>🏆 Single &amp; Multi-Game Tournaments</li>
-            </ul>
+          {/* CARD 1 */}
+          <div className="relative rounded-2xl p-[1px] bg-gradient-to-br from-amber-500/70 via-orange-600/70 to-rose-600/70 shadow-[0_0_28px_rgba(249,115,22,0.25)]">
+            <div className="rounded-2xl bg-black/55 backdrop-blur-md px-6 py-6 md:px-8 md:py-8">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-full
+                                 bg-gradient-to-br from-amber-400 to-rose-500 shadow-[0_0_18px_rgba(249,115,22,0.45)]
+                                 text-white text-xl select-none">🔥</span>
+                <h3 className="text-2xl font-semibold">Game Modes</h3>
+              </div>
+
+              <ul className="mt-5 space-y-2 text-white/90 text-lg leading-relaxed">
+                <li>⚔️ 1v1 Solo Ranked Matches</li>
+                <li>🛡️ 5v5 Classic Ranked Games</li>
+                <li>⚡ 5v5 Turbo Mode</li>
+                <li>🏆 Single &amp; Multi-Game Tournaments</li>
+              </ul>
+            </div>
           </div>
 
-          {/* Card 2 */}
-          <div className="glass-card lava-border p-6 md:p-8">
-            <div className="flex items-center gap-3">
-              <div className="badge-neon">🧠</div>
-              <h3 className="text-xl md:text-2xl font-semibold">Fair Play System</h3>
-            </div>
+          {/* CARD 2 */}
+          <div className="relative rounded-2xl p-[1px] bg-gradient-to-br from-sky-400/70 via-cyan-400/70 to-indigo-500/70 shadow-[0_0_28px_rgba(56,189,248,0.22)]">
+            <div className="rounded-2xl bg-black/55 backdrop-blur-md px-6 py-6 md:px-8 md:py-8">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-full
+                                 bg-gradient-to-br from-sky-400 to-indigo-500 shadow-[0_0_18px_rgba(56,189,248,0.45)]
+                                 text-white text-xl select-none">🧠</span>
+                <h3 className="text-2xl font-semibold">Fair Play System</h3>
+              </div>
 
-            <ul className="mt-5 space-y-2 text-white/90 text-base md:text-lg leading-relaxed">
-              <li>📊 MMR bracket-based matchmaking</li>
-              <li>🚫 Smurf &amp; abuse prevention built-in</li>
-              <li>🕵️‍♂️ 200+ ranked games from same IP</li>
-              <li>🔒 IP/device change resets eligibility</li>
-              <li>🌐 Public Steam &amp; Dota 2 profile required</li>
-            </ul>
+              <ul className="mt-5 space-y-2 text-white/90 text-lg leading-relaxed">
+                <li>📊 MMR bracket-based matchmaking</li>
+                <li>🚫 Smurf &amp; abuse prevention built-in</li>
+                <li>🕵️‍♂️ 200+ ranked games from same IP</li>
+                <li>🔒 IP/device change resets eligibility</li>
+                <li>🌐 Public Steam &amp; Dota 2 profile required</li>
+              </ul>
+            </div>
           </div>
+
         </div>
       </section>
 
