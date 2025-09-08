@@ -14,52 +14,55 @@ export default function LoginPage() {
     <div
       className="login-scope relative min-h-[100vh] overflow-hidden text-white"
       style={{
-        backgroundImage: 'url("/dota-bg.png")', // <-- твой файл
+        backgroundImage: 'url("/dota-bg.png")', // <-- твой фон
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
     >
-      {/* Кнопка Steam в углу */}
-      <div className="absolute right-4 top-4 z-10">
+      {/* ===== Кнопка Steam (правый верх) ===== */}
+      <div className="absolute right-6 top-6 z-20">
         <SteamCTA />
       </div>
 
-      {/* Текст */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-20">
-        <p className="text-sm uppercase tracking-[0.25em] text-white/85 drop-shadow">
-          WELCOME TO
-        </p>
-        <h1 className="mt-2 text-5xl md:text-7xl font-extrabold tracking-tight drop-shadow-lg">
+      {/* ===== Большой текст ===== */}
+      <section className="relative z-10 max-w-7xl px-6 pt-28">
+        <h1 className="text-[64px] md:text-[100px] lg:text-[140px] font-extrabold leading-tight drop-shadow-lg text-left">
           CYBERSTARS
         </h1>
-        <p className="mt-5 max-w-2xl text-lg text-white/90">
+        <p className="mt-6 max-w-2xl text-lg md:text-2xl text-white/90 text-left drop-shadow">
           Compete in Dota 2 tournaments; earn prizes and fun rewards
         </p>
       </section>
 
-      {/* Карточка */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-10 pb-20">
-        <div className="rounded-2xl bg-black/60 backdrop-blur-lg p-8">
-          <h3 className="flex items-center gap-2 text-xl font-semibold">
-            <span>🔥</span> Game Modes
-          </h3>
-          <ul className="mt-4 space-y-2">
-            <li>⚔️ 1v1 Solo Ranked Matches</li>
-            <li>🛡️ 5v5 Classic Ranked Games</li>
-            <li>⚡ 5v5 Turbo Mode</li>
-            <li>🏆 Single &amp; Multi-Game Tournaments</li>
-          </ul>
+      {/* ===== Карточка с инфой ===== */}
+      <section className="relative z-10 mx-auto max-w-5xl px-6 mt-16 pb-20">
+        <div className="rounded-2xl bg-black/60 backdrop-blur-lg p-8 shadow-lg">
+          {/* Game Modes */}
+          <div>
+            <h3 className="flex items-center gap-2 text-2xl font-semibold">
+              <span>🔥</span> Game Modes
+            </h3>
+            <ul className="mt-4 space-y-2 text-base text-white/90">
+              <li>⚔️ 1v1 Solo Ranked Matches</li>
+              <li>🛡️ 5v5 Classic Ranked Games</li>
+              <li>⚡ 5v5 Turbo Mode</li>
+              <li>🏆 Single &amp; Multi-Game Tournaments</li>
+            </ul>
+          </div>
 
-          <h3 className="mt-8 flex items-center gap-2 text-xl font-semibold">
-            <span>🧠</span> Fair Play System
-          </h3>
-          <ul className="mt-4 space-y-2">
-            <li>📊 MMR bracket-based matchmaking</li>
-            <li>🚫 Smurf &amp; abuse prevention built-in</li>
-            <li>🕵️‍♂️ 200+ ranked games from same IP</li>
-            <li>🔒 IP/device change resets eligibility</li>
-            <li>🌐 Public Steam &amp; Dota 2 profile required</li>
-          </ul>
+          {/* Fair Play */}
+          <div className="mt-10">
+            <h3 className="flex items-center gap-2 text-2xl font-semibold">
+              <span>🧠</span> Fair Play System
+            </h3>
+            <ul className="mt-4 space-y-2 text-base text-white/90">
+              <li>📊 MMR bracket-based matchmaking</li>
+              <li>🚫 Smurf &amp; abuse prevention built-in</li>
+              <li>🕵️‍♂️ 200+ ranked games from same IP</li>
+              <li>🔒 IP/device change resets eligibility</li>
+              <li>🌐 Public Steam &amp; Dota 2 profile required</li>
+            </ul>
+          </div>
         </div>
       </section>
     </div>
