@@ -39,3 +39,69 @@
 .login-scope header a[href="/steam-login"]:not(#steam-login-cta) {
   display: none !important;
 }
+/* ───────────────────── Glass Cards + Lava Border ───────────────────── */
+
+.glass-card {
+  position: relative;
+  border-radius: 18px;
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0 10px 40px rgba(0,0,0,0.35),
+    0 0 0 1px rgba(255,255,255,0.04) inset;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.glass-card:hover {
+  transform: translateY(-2px);
+  background: rgba(0,0,0,0.60);
+  box-shadow:
+    0 14px 56px rgba(0,0,0,0.45),
+    0 0 0 1px rgba(255,255,255,0.06) inset,
+    0 0 22px rgba(249,115,22,0.28);
+}
+
+/* «Лавовый» светящийся бордер (градиент вокруг) */
+.lava-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: 20px;
+  background: conic-gradient(
+    from 180deg at 50% 50%,
+    rgba(239,68,68,0.85),
+    rgba(249,115,22,0.85),
+    rgba(245,158,11,0.85),
+    rgba(249,115,22,0.85),
+    rgba(239,68,68,0.85)
+  );
+  filter: blur(10px) saturate(130%);
+  opacity: .55;
+}
+
+/* круглые бейджи для иконок секций */
+.badge-lava,
+.badge-neon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  width: 40px;
+  border-radius: 9999px;
+  font-size: 20px;
+  line-height: 1;
+  color: #fff;
+  user-select: none;
+}
+
+.badge-lava {
+  background: radial-gradient(120% 120% at 30% 25%, #f97316 0%, #ef4444 100%);
+  box-shadow: 0 0 20px rgba(249,115,22,0.55), inset 0 0 10px rgba(255,255,255,0.12);
+}
+
+.badge-neon {
+  background: radial-gradient(120% 120% at 30% 25%, #22d3ee 0%, #3b82f6 100%);
+  box-shadow: 0 0 20px rgba(59,130,246,0.45), inset 0 0 10px rgba(255,255,255,0.12);
+}

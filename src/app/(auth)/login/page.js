@@ -37,14 +37,17 @@ export default function LoginPage() {
         </p>
       </section>
 
-      {/* INFO CARD */}
-      <section className="relative z-10 mx-auto max-w-5xl px-6 mt-14 pb-20">
-        <div className="rounded-2xl bg-black/60 backdrop-blur-lg p-8 shadow-lg">
-          <div>
-            <h3 className="flex items-center gap-2 text-2xl font-semibold">
-              <span>🔥</span> Game Modes
-            </h3>
-            <ul className="mt-4 space-y-2 text-base text-white/90">
+           {/* INFO CARDS — glass + lava glow */}
+      <section className="relative z-10 mx-auto max-w-6xl px-6 mt-14 pb-24">
+        <div className="grid gap-6 md:gap-8 md:grid-cols-2">
+          {/* Card 1 */}
+          <div className="glass-card lava-border p-6 md:p-8">
+            <div className="flex items-center gap-3">
+              <div className="badge-lava">🔥</div>
+              <h3 className="text-xl md:text-2xl font-semibold">Game Modes</h3>
+            </div>
+
+            <ul className="mt-5 space-y-2 text-white/90 text-base md:text-lg leading-relaxed">
               <li>⚔️ 1v1 Solo Ranked Matches</li>
               <li>🛡️ 5v5 Classic Ranked Games</li>
               <li>⚡ 5v5 Turbo Mode</li>
@@ -52,11 +55,14 @@ export default function LoginPage() {
             </ul>
           </div>
 
-          <div className="mt-10">
-            <h3 className="flex items-center gap-2 text-2xl font-semibold">
-              <span>🧠</span> Fair Play System
-            </h3>
-            <ul className="mt-4 space-y-2 text-base text-white/90">
+          {/* Card 2 */}
+          <div className="glass-card lava-border p-6 md:p-8">
+            <div className="flex items-center gap-3">
+              <div className="badge-neon">🧠</div>
+              <h3 className="text-xl md:text-2xl font-semibold">Fair Play System</h3>
+            </div>
+
+            <ul className="mt-5 space-y-2 text-white/90 text-base md:text-lg leading-relaxed">
               <li>📊 MMR bracket-based matchmaking</li>
               <li>🚫 Smurf &amp; abuse prevention built-in</li>
               <li>🕵️‍♂️ 200+ ranked games from same IP</li>
@@ -66,6 +72,7 @@ export default function LoginPage() {
           </div>
         </div>
       </section>
+
     </div>
   );
 }
