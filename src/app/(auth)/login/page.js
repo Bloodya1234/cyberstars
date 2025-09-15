@@ -19,7 +19,7 @@ export default function LoginPage() {
         backgroundPosition: 'center',
       }}
     >
-      {/* Кнопка входа в правом верхнем углу */}
+      {/* кнопка входа в правом верхнем углу */}
       <SteamCTA className="fixed right-6 top-6 z-50" />
 
       {/* HERO */}
@@ -34,41 +34,41 @@ export default function LoginPage() {
           <div>CYBERSTARS</div>
         </h1>
 
-        <p className="hero-subtitle mx-auto mt-6 max-w-4xl text-[22px] md:text-[28px] lg:text-[32px] text-white/90 drop-shadow">
-                 Заходи к нам и используй свой скил,
-           чтобы зарабатывать деньги играя в любимые игры
+        {/* слоган в ДВЕ строки */}
+        <p className="hero-subtitle mx-auto mt-6 max-w-5xl text-white/90 drop-shadow text-[22px] md:text-[28px] lg:text-[32px] leading-tight">
+          Заходи к нам и используй свой скил,<br />
+          чтобы зарабатывать деньги играя в любимые игры
         </p>
 
-        {/* Центральная жёлтая кнопка */}
+        {/* центральная жёлтая кнопка */}
         <a href="/steam-login" className="hero-cta inline-flex items-center justify-center mt-8">
           LOGIN STEAM
         </a>
       </section>
 
-      {/* Карточка «Наши игры» */}
+      {/* КАРТОЧКА «Наши игры» */}
       <section className="relative z-10 mx-auto max-w-6xl px-6 pb-24 mt-80">
         <div className="features-card lava-card allow-border mx-auto w-full max-w-[980px] p-6 md:p-8">
-          {/* Логотипы + заголовок в одной линии */}
-          <div className="relative flex items-center justify-between mb-6">
-            <img
-              src="/dota-logo.png"
-              alt="Dota 2 logo"
-              className="w-[52px] h-[52px] object-contain 
-                         filter drop-shadow-[0_0_6px_rgba(255,255,255,0.85)] 
-                         bg-black/30 rounded-lg p-1"
-            />
-            <h3 className="text-center text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-wide">
-              НАШИ ИГРЫ
-            </h3>
-            <img
-              src="/csgo-logo.png"
-              alt="CS:GO logo"
-              className="w-[52px] h-[52px] object-contain 
-                         filter drop-shadow-[0_0_6px_rgba(255,255,255,0.85)] 
-                         bg-black/30 rounded-lg p-1"
-            />
-          </div>
+          {/* ЛОГОТИПЫ — ВЕРХНИЕ УГЛЫ КАРТОЧКИ */}
+          <img
+            src="/dota-logo.png"
+            alt="Dota 2 logo"
+            className="card-logo-left"
+            width={52}
+            height={52}
+          />
+          <img
+            src="/csgo-logo.png"
+            alt="CS:GO logo"
+            className="card-logo-right"
+            width={52}
+            height={52}
+          />
 
+          {/* ЗАГОЛОВОК — ВЫШЕ И БОЛЬШЕ, НА УРОВНЕ ЛОГОТИПОВ */}
+          <h3 className="card-title text-center font-extrabold tracking-wide text-2xl md:text-3xl lg:text-4xl">
+            НАШИ ИГРЫ
+          </h3>
           <ul className="feature-list grid gap-4 text-[16px] md:text-[18px] leading-relaxed">
             <li>⚔️ Игры различных типов (1 на 1, 5 на 5)</li>
             <li>🔍 Поиск команды или игроков в твою команду</li>
