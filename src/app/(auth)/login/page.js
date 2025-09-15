@@ -46,15 +46,17 @@ export default function LoginPage() {
       </section>
 
       {/* Карточка «Наши игры» */}
-<section className="relative z-10 mx-auto max-w-6xl px-6 pb-24 mt-24">
+<section className="relative z-10 mx-auto max-w-6xl px-6 pb-24 mt-48">
+
   <div className="features-card lava-card allow-border mx-auto w-full max-w-[980px] p-6 md:p-8">
     {/* Логотипы по углам карточки */}
-    <div className="corner-logo logo-left" aria-hidden>
-      <img src="/dota-logo.svg" alt="Dota 2 logo" />
-    </div>
-    <div className="corner-logo logo-right" aria-hidden>
-      <img src="/csgo-logo.svg" alt="CS:GO logo" />
-    </div>
+   <div className="corner-logo logo-left" aria-hidden>
+  <img src="/dota-logo.png" alt="Dota 2 logo" />
+</div>
+<div className="corner-logo logo-right" aria-hidden>
+  <img src="/csgo-logo.png" alt="CS:GO logo" />
+</div>
+
 
     <h3 className="text-center text-2xl md:text-3xl font-extrabold tracking-wide mb-6">
       НАШИ ИГРЫ
