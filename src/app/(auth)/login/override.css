@@ -21,15 +21,15 @@
 .hero-cta:active { transform: translateY(0) scale(.99); }
 
 /* ===== FEATURES CARD ===== */
-/* Вернули компактные отступы, чтобы карточка не меняла высоту */
+/* Компактный размер карточки (как раньше) */
 .features-card {
   position: relative;
   background: rgba(0,0,0,.55);
   border-radius: 18px;
   backdrop-filter: blur(10px);
   box-shadow: 0 10px 40px rgba(0,0,0,.35);
-  padding-top: 72px;     /* было 96px — вернули меньше */
-  padding-bottom: 56px;  /* было 120px — вернули меньше */
+  padding-top: 92px;     /* место под заголовок + верхние лого/подписи */
+  padding-bottom: 40px;  /* компактно снизу */
 }
 
 /* Страховка: расположение карточки ниже hero */
@@ -38,16 +38,62 @@
   .login-scope .features-card { margin-top: 10rem !important; }
 }
 
-/* Заголовок — крупный, фиксирован сверху */
+/* Заголовок — по центру сверху */
 .card-title {
   position: absolute;
-  top: 16px;
+  top: 18px;
   left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - 220px);
+  width: calc(100% - 260px); /* чтобы не пересекаться с подписью/логотипами */
   line-height: 1.1;
   text-shadow: 0 6px 24px rgba(0,0,0,.45);
 }
+
+/* ===== Подписи над верхними логотипами ===== */
+.card-label-top-left,
+.card-label-top-right {
+  position: absolute;
+  top: 12px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  color: #e7f5ff;
+  background: rgba(0,0,0,.35);
+  backdrop-filter: blur(6px);
+  text-shadow: 0 2px 8px rgba(0,0,0,.5);
+  padding: 6px 10px;
+  border-radius: 10px;
+  z-index: 3;
+  font-size: 14px;
+}
+.card-label-top-left  { left: 16px; }
+.card-label-top-right { right: 16px; }
+@media (min-width: 768px)  { .card-label-top-left, .card-label-top-right { font-size: 16px; } }
+@media (min-width: 1280px) { .card-label-top-left, .card-label-top-right { font-size: 18px; } }
+
+/* ===== Логотипы — ВЕРХНИЕ УГЛЫ ===== */
+.card-logo-left,
+.card-logo-right {
+  position: absolute;
+  top: 40px;                 /* ниже подписи */
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(255,255,255,.85));
+  background: rgba(0,0,0,.28);
+  border-radius: 14px;
+  padding: 6px;
+  z-index: 2;
+}
+.card-logo-left  { left: 16px; }
+.card-logo-right { right: 16px; }
+
+@media (min-width: 1280px) {
+  .card-logo-left, .card-logo-right { width: 104px; height: 104px; top: 36px; }
+}
+
+/* Если вдруг остались нижние лого — отключим их */
+.card-logo-bottom-left, .card-logo-bottom-right,
+.card-label-left, .card-label-right { display: none !important; }
 
 /* ===== СПИСОК — по центру и крупный ===== */
 .feature-list {
@@ -66,61 +112,3 @@
 }
 @media (min-width: 768px)  { .feature-list li { font-size: 26px; } }
 @media (min-width: 1280px) { .feature-list li { font-size: 28px; } }
-
-/* ===== Нижние подписи и логотипы (увеличены) ===== */
-/* Подписи — больше */
-.card-label-left,
-.card-label-right {
-  position: absolute;
-  font-weight: 900;
-  letter-spacing: .1em;
-  color: #e7f5ff;
-  background: rgba(0,0,0,.35);
-  backdrop-filter: blur(6px);
-  text-shadow: 0 2px 8px rgba(0,0,0,.5);
-  padding: 6px 10px;
-  border-radius: 10px;
-  z-index: 3;
-}
-
-/* Лого — БОЛЬШЕ, при этом "снаружи" снизу, чтобы высота карточки не менялась */
-.card-logo-bottom-left,
-.card-logo-bottom-right {
-  position: absolute;
-  object-fit: contain;
-  filter: drop-shadow(0 0 10px rgba(255,255,255,.85));
-  background: rgba(0,0,0,.28);
-  border-radius: 14px;
-  padding: 6px;
-  z-index: 2;
-  bottom: -18px;     /* выводим лого за пределы карточки */
-}
-
-/* Расположение слева/справа */
-.card-logo-bottom-left  { left: 16px; }
-.card-logo-bottom-right { right: 16px; }
-
-/* Базовые размеры (мобилы) */
-.card-logo-bottom-left,
-.card-logo-bottom-right { width: 96px; height: 96px; }
-.card-label-left  { left: 16px;  bottom: 74px;  font-size: 14px; }
-.card-label-right { right: 16px; bottom: 74px;  font-size: 14px; }
-
-/* Планшеты */
-@media (min-width: 768px) {
-  .card-logo-bottom-left,
-  .card-logo-bottom-right { width: 116px; height: 116px; bottom: -20px; }
-  .card-label-left  { bottom: 96px; font-size: 16px; }
-  .card-label-right { bottom: 96px; font-size: 16px; }
-}
-
-/* Десктопы */
-@media (min-width: 1280px) {
-  .card-logo-bottom-left,
-  .card-logo-bottom-right { width: 140px; height: 140px; bottom: -22px; }
-  .card-label-left  { bottom: 118px; font-size: 18px; }
-  .card-label-right { bottom: 118px; font-size: 18px; }
-}
-
-/* (Если где-то остались старые верхние лого — выключим их) */
-.card-logo-left, .card-logo-right { display: none !important; }
