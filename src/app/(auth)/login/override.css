@@ -69,3 +69,31 @@
   text-shadow: 0 2px 12px rgba(0,0,0,.35);
 }
 .feature-list strong { color: #fff; }
+/* увеличить текст и выровнять список по центру */
+.feature-list {
+  margin-top: 1.5rem;         /* отступ сверху от заголовка */
+  display: flex;
+  flex-direction: column;
+  align-items: center;        /* центрирование по горизонтали */
+  gap: 1rem;                  /* расстояние между пунктами */
+}
+
+.feature-list li {
+  font-size: 20px;            /* базовый размер текста */
+  line-height: 1.5;
+  text-align: center;         /* текст по центру */
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(0,0,0,.35);
+}
+
+@media (min-width: 768px) {
+  .feature-list li {
+    font-size: 22px;          /* планшеты и выше */
+  }
+}
+
+@media (min-width: 1280px) {
+  .feature-list li {
+    font-size: 24px;          /* большие экраны */
+  }
+}
