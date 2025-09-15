@@ -23,36 +23,51 @@
 /* ===== FEATURES CARD ===== */
 .features-card {
   position: relative;
-  background: rgba(0,0,0,.55);            /* стекло */
+  background: rgba(0,0,0,.55);      /* стекло */
   border-radius: 18px;
   backdrop-filter: blur(10px);
   box-shadow: 0 10px 40px rgba(0,0,0,.35);
-  padding-top: 68px;                      /* место для логотипов + заголовка */
+  padding-top: 72px;                /* место под лого и заголовок */
 }
 
-/* Дополнительно опустить карточку (если section не двигает достаточно) */
-.login-scope .features-card { margin-top: 6rem !important; } /* ~96px */
-@media (min-width: 1024px) {
-  .login-scope .features-card { margin-top: 8rem !important; } /* ~128px на десктопе */
+/* Дополнительно опустить карточку (страховка поверх классов секции) */
+.login-scope .features-card { margin-top: 8rem !important; }   /* ~128px */
+@media (min-width: 1280px) {
+  .login-scope .features-card { margin-top: 10rem !important; } /* ~160px на десктопе */
 }
 
-/* логотипы ВНУТРИ карточки, по верхним углам */
-.corner-logo {
+/* ===== ЛОГОТИПЫ ВНУТРИ КАРТОЧКИ ===== */
+/* Вариант НОВОЙ разметки: <img class="card-logo-left/right" ...> */
+.card-logo-left,
+.card-logo-right {
   position: absolute;
-  top: 12px;                /* внутри карточки */
+  top: 14px;                      /* внутри карточки */
   width: 52px;
   height: 52px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px rgba(255,255,255,.85));
+  background: rgba(0,0,0,.28);
+  border-radius: 8px;
+  padding: 2px;
+  z-index: 2;
+}
+.card-logo-left  { left: 16px; }
+.card-logo-right { right: 16px; }
+
+/* Вариант СТАРОЙ разметки: .corner-logo .logo-left/.logo-right */
+.corner-logo {
+  position: absolute !important;
+  top: 14px !important;
+  width: 52px !important;
+  height: 52px !important;
   display: grid;
   place-items: center;
   opacity: 1;
   z-index: 2;
 }
+.logo-left  { left: 16px !important; }
+.logo-right { right: 16px !important; }
 
-/* левый/правый отступы */
-.logo-left  { left:  12px; }
-.logo-right { right: 12px; }
-
-/* видимость логотипов на тёмном фоне */
 .corner-logo img {
   width: 100%;
   height: 100%;
@@ -64,7 +79,7 @@
 }
 .logo-fallback { font-weight: 900; font-size: 14px; letter-spacing: .1em; }
 
-/* список внутри карточки */
+/* ===== СПИСОК ВНУТРИ КАРТОЧКИ ===== */
 .feature-list li {
   color: #fff;
   text-shadow: 0 2px 12px rgba(0,0,0,.35);
