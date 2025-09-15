@@ -49,35 +49,39 @@ export default function LoginPage() {
       {/* КАРТОЧКА «Наши игры» */}
       <section className="relative z-10 mx-auto max-w-6xl px-6 pb-24 mt-80">
         <div className="features-card lava-card allow-border mx-auto w-full max-w-[980px] p-6 md:p-8">
-          {/* ЛОГОТИПЫ — ВЕРХНИЕ УГЛЫ КАРТОЧКИ */}
+          {/* ЗАГОЛОВОК — крупнее и фиксирован сверху */}
+          <h3 className="card-title text-center font-extrabold tracking-wide text-3xl md:text-4xl lg:text-5xl">
+            НАШИ ИГРЫ
+          </h3>
+
+          {/* СПИСОК — по центру, крупнее */}
+          <ul className="feature-list">
+            <li>⚔️ <strong>Игры различных типов</strong> (1 на 1, 5 на 5)</li>
+            <li>🔍 <strong>Поиск команды</strong> или игроков в твою команду</li>
+            <li>🏆 <strong>Различные турниры</strong> как с призовым фондом, так и без</li>
+            <li>📊 <strong>Подбор игроков</strong> на основе вашего MMR</li>
+            <li>🚫 <strong>Встроенная защита</strong> от смурфов и злоупотреблений</li>
+          </ul>
+
+          {/* Подписи над логотипами (нижние углы) */}
+          <span className="card-label-left">DOTA2</span>
+          <span className="card-label-right">CSGO2</span>
+
+          {/* ЛОГОТИПЫ — нижние углы карточки (увеличены) */}
           <img
             src="/dota-logo.png"
             alt="Dota 2 logo"
-            className="card-logo-left"
-            width={52}
-            height={52}
+            className="card-logo-bottom-left"
+            width={96}
+            height={96}
           />
           <img
             src="/csgo-logo.png"
             alt="CS:GO logo"
-            className="card-logo-right"
-            width={52}
-            height={52}
+            className="card-logo-bottom-right"
+            width={96}
+            height={96}
           />
-
-          {/* ЗАГОЛОВОК — ВЫШЕ И БОЛЬШЕ, НА УРОВНЕ ЛОГОТИПОВ */}
-          <h3 className="card-title text-center font-extrabold tracking-wide text-2xl md:text-3xl lg:text-4xl">
-            НАШИ ИГРЫ
-          </h3>
-      <ul className="flex flex-col items-center gap-4 text-[20px] md:text-[22px] lg:text-[24px] leading-relaxed">
-  <li>⚔️ <strong>Игры различных типов</strong> (1 на 1, 5 на 5)</li>
-  <li>🔍 <strong>Поиск команды</strong> или игроков в твою команду</li>
-  <li>🏆 <strong>Различные турниры</strong> как с призовым фондом, так и без</li>
-  <li>📊 <strong>Подбор игроков</strong> на основе вашего MMR</li>
-  <li>🚫 <strong>Встроенная защита</strong> от смурфов и злоупотреблений</li>
-</ul>
-
-
         </div>
       </section>
     </div>
