@@ -1,5 +1,5 @@
 // src/app/(auth)/login/page.js
-
+import SteamCTA from './SteamCTA.client';
 
 export const metadata = {
   title: 'Login — CyberStars',
