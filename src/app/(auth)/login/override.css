@@ -78,22 +78,23 @@
   gap: 1rem;                  /* расстояние между пунктами */
 }
 
+/* список внутри карточки — ещё больше */
 .feature-list li {
-  font-size: 20px;            /* базовый размер текста */
-  line-height: 1.5;
-  text-align: center;         /* текст по центру */
+  font-size: 22px;   /* было 18–20px, теперь больше */
+  line-height: 1.6;
+  text-align: center;
   color: #fff;
   text-shadow: 0 2px 12px rgba(0,0,0,.35);
 }
 
 @media (min-width: 768px) {
   .feature-list li {
-    font-size: 22px;          /* планшеты и выше */
+    font-size: 26px; /* планшеты и выше */
   }
 }
 
 @media (min-width: 1280px) {
   .feature-list li {
-    font-size: 24px;          /* большие экраны */
+    font-size: 28px; /* большие экраны */
   }
 }

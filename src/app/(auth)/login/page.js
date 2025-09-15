@@ -49,21 +49,37 @@ export default function LoginPage() {
       {/* КАРТОЧКА «Наши игры» */}
       <section className="relative z-10 mx-auto max-w-6xl px-6 pb-24 mt-80">
         <div className="features-card lava-card allow-border mx-auto w-full max-w-[980px] p-6 md:p-8">
-          {/* ЛОГОТИПЫ — ВЕРХНИЕ УГЛЫ КАРТОЧКИ */}
-          <img
-            src="/dota-logo.png"
-            alt="Dota 2 logo"
-            className="card-logo-left"
-            width={52}
-            height={52}
-          />
-          <img
-            src="/csgo-logo.png"
-            alt="CS:GO logo"
-            className="card-logo-right"
-            width={52}
-            height={52}
-          />
+         {/* ЛОГОТИП DOTA + СТИКЕР ПОД НИМ */}
+<div className="relative flex flex-col items-center">
+  <img
+    src="/dota-logo.png"
+    alt="Dota 2 logo"
+    className="w-[52px] h-[52px] object-contain 
+               filter drop-shadow-[0_0_6px_rgba(255,255,255,0.85)] 
+               bg-black/30 rounded-lg p-1"
+  />
+  <img
+    src="/mini-pudge.png"
+    alt="Mini Pudge Sticker"
+    className="w-[72px] h-[72px] mt-2 object-contain drop-shadow-lg"
+  />
+</div>
+
+         <div className="relative flex flex-col items-center">
+    <img
+      src="/csgo-logo.png"
+      alt="CS:GO logo"
+      className="w-[52px] h-[52px] object-contain 
+                 filter drop-shadow-[0_0_6px_rgba(255,255,255,0.85)] 
+                 bg-black/30 rounded-lg p-1"
+    />
+    <img
+      src="/mini-csgo.png"
+      alt="Mini CS:GO Sticker"
+      className="w-[72px] h-[72px] mt-2 object-contain drop-shadow-lg"
+    />
+  </div>
+
 
           {/* ЗАГОЛОВОК — ВЫШЕ И БОЛЬШЕ, НА УРОВНЕ ЛОГОТИПОВ */}
           <h3 className="card-title text-center font-extrabold tracking-wide text-2xl md:text-3xl lg:text-4xl">
