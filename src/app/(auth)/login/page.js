@@ -13,14 +13,13 @@ export default function LoginPage() {
   return (
     <div
       className="login-scope relative min-h-[100vh] overflow-hidden text-white"
-   style={{
-  backgroundImage: 'url("/dota-bg.png")',
-  backgroundSize: 'cover',
-  backgroundPosition: 'center',
-}}
-
+      style={{
+        backgroundImage: 'url("/dota-bg.png")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
     >
-      {/* Фирменная кнопка в правом верхнем углу */}
+      {/* Кнопка входа в правом верхнем углу */}
       <SteamCTA className="fixed right-6 top-6 z-50" />
 
       {/* HERO */}
@@ -46,32 +45,57 @@ export default function LoginPage() {
       </section>
 
       {/* Карточка «Наши игры» */}
-<section className="relative z-10 mx-auto max-w-6xl px-6 pb-24 mt-48">
+      <section className="relative z-10 mx-auto max-w-6xl px-6 pb-24 mt-64">
+        <div className="features-card lava-card allow-border mx-auto w-full max-w-[980px] p-6 md:p-8">
+          {/* Логотипы по углам карточки */}
+          <div className="corner-logo logo-left" aria-hidden>
+            <img
+              src="/dota-logo.png"
+              alt="Dota 2 logo"
+              width={52}
+              height={52}
+              style={{
+                width: 52,
+                height: 52,
+                objectFit: 'contain',
+                filter: 'drop-shadow(0 0 6px rgba(255,255,255,0.85))',
+                background: 'rgba(0,0,0,0.28)',
+                borderRadius: 8,
+                padding: 2,
+              }}
+            />
+          </div>
+          <div className="corner-logo logo-right" aria-hidden>
+            <img
+              src="/csgo-logo.png"
+              alt="CS:GO logo"
+              width={52}
+              height={52}
+              style={{
+                width: 52,
+                height: 52,
+                objectFit: 'contain',
+                filter: 'drop-shadow(0 0 6px rgba(255,255,255,0.85))',
+                background: 'rgba(0,0,0,0.28)',
+                borderRadius: 8,
+                padding: 2,
+              }}
+            />
+          </div>
 
-  <div className="features-card lava-card allow-border mx-auto w-full max-w-[980px] p-6 md:p-8">
-    {/* Логотипы по углам карточки */}
-   <div className="corner-logo logo-left" aria-hidden>
-  <img src="/dota-logo.png" alt="Dota 2 logo" />
-</div>
-<div className="corner-logo logo-right" aria-hidden>
-  <img src="/csgo-logo.png" alt="CS:GO logo" />
-</div>
+          <h3 className="text-center text-2xl md:text-3xl font-extrabold tracking-wide mb-6">
+            НАШИ ИГРЫ
+          </h3>
 
-
-    <h3 className="text-center text-2xl md:text-3xl font-extrabold tracking-wide mb-6">
-      НАШИ ИГРЫ
-    </h3>
-
-    <ul className="feature-list grid gap-4 text-[16px] md:text-[18px] leading-relaxed">
-      <li>⚔️ Игры различных типов (1 на 1, 5 на 5)</li>
-      <li>🔍 Поиск команды или игроков в твою команду</li>
-      <li>🏆 Различные турниры как с призовым фондом, так и без</li>
-      <li>📊 Подбор игроков на основе вашего MMR</li>
-      <li>🚫 Встроенная защита от смурфов и злоупотреблений</li>
-    </ul>
-  </div>
-</section>
-
+          <ul className="feature-list grid gap-4 text-[16px] md:text-[18px] leading-relaxed">
+            <li>⚔️ Игры различных типов (1 на 1, 5 на 5)</li>
+            <li>🔍 Поиск команды или игроков в твою команду</li>
+            <li>🏆 Различные турниры как с призовым фондом, так и без</li>
+            <li>📊 Подбор игроков на основе вашего MMR</li>
+            <li>🚫 Встроенная защита от смурфов и злоупотреблений</li>
+          </ul>
+        </div>
+      </section>
     </div>
   );
 }
