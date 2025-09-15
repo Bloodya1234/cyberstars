@@ -69,13 +69,14 @@ export default function LoginPage() {
           <h3 className="card-title text-center font-extrabold tracking-wide text-2xl md:text-3xl lg:text-4xl">
             НАШИ ИГРЫ
           </h3>
-          <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4 text-[18px] leading-relaxed">
+      <ul className="flex flex-col items-center gap-4 text-[20px] md:text-[22px] lg:text-[24px] leading-relaxed">
   <li>⚔️ <strong>Игры различных типов</strong> (1 на 1, 5 на 5)</li>
   <li>🔍 <strong>Поиск команды</strong> или игроков в твою команду</li>
   <li>🏆 <strong>Различные турниры</strong> как с призовым фондом, так и без</li>
   <li>📊 <strong>Подбор игроков</strong> на основе вашего MMR</li>
   <li>🚫 <strong>Встроенная защита</strong> от смурфов и злоупотреблений</li>
 </ul>
+
 
         </div>
       </section>
