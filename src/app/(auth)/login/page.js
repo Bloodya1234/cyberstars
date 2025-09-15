@@ -44,14 +44,16 @@ export default function LoginPage() {
         </a>
       </section>
 
-      {/* Карточка «Наши игры» */}
-      <section className="relative z-10 mx-auto max-w-6xl px-6 pb-24 mt-64">
+      {/* Карточка «Наши игры» — ОПУСТИЛ НИЖЕ */}
+      <section className="relative z-10 mx-auto max-w-6xl px-6 pb-24 mt-80">
         <div className="features-card lava-card allow-border mx-auto w-full max-w-[980px] p-6 md:p-8">
-          {/* Логотипы по углам карточки */}
-          <div className="corner-logo logo-left" aria-hidden>
+          {/* Шапка карточки: логотипы по углам внутри + заголовок по центру */}
+          <div className="card-header relative mb-6">
+            {/* Dota — левый верхний угол */}
             <img
               src="/dota-logo.png"
               alt="Dota 2 logo"
+              className="card-logo absolute left-4 top-3"
               width={52}
               height={52}
               style={{
@@ -64,11 +66,15 @@ export default function LoginPage() {
                 padding: 2,
               }}
             />
-          </div>
-          <div className="corner-logo logo-right" aria-hidden>
+            {/* Заголовок по центру */}
+            <h3 className="text-center text-2xl md:text-3xl font-extrabold tracking-wide">
+              НАШИ ИГРЫ
+            </h3>
+            {/* CS:GO — правый верхний угол */}
             <img
               src="/csgo-logo.png"
               alt="CS:GO logo"
+              className="card-logo absolute right-4 top-3"
               width={52}
               height={52}
               style={{
@@ -83,12 +89,8 @@ export default function LoginPage() {
             />
           </div>
 
-          <h3 className="text-center text-2xl md:text-3xl font-extrabold tracking-wide mb-6">
-            НАШИ ИГРЫ
-          </h3>
-
           <ul className="feature-list grid gap-4 text-[16px] md:text-[18px] leading-relaxed">
-            <li>⚔️ Игры различных типов (1 на 1, 5 на 5)</li>
+             <li>⚔️ Игры различных типов (1 на 1, 5 на 5)</li>
             <li>🔍 Поиск команды или игроков в твою команду</li>
             <li>🏆 Различные турниры как с призовым фондом, так и без</li>
             <li>📊 Подбор игроков на основе вашего MMR</li>

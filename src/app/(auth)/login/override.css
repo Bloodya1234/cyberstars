@@ -27,21 +27,41 @@
   border-radius: 18px;
   backdrop-filter: blur(10px);
   box-shadow: 0 10px 40px rgba(0,0,0,.35);
+  padding-top: 68px;                      /* место для логотипов + заголовка */
 }
 
-/* логотипы в углах карточки */
+/* Дополнительно опустить карточку (если section не двигает достаточно) */
+.login-scope .features-card { margin-top: 6rem !important; } /* ~96px */
+@media (min-width: 1024px) {
+  .login-scope .features-card { margin-top: 8rem !important; } /* ~128px на десктопе */
+}
+
+/* логотипы ВНУТРИ карточки, по верхним углам */
 .corner-logo {
   position: absolute;
-  top: -22px;
+  top: 12px;                /* внутри карточки */
   width: 52px;
   height: 52px;
   display: grid;
   place-items: center;
-  opacity: .95;
+  opacity: 1;
+  z-index: 2;
 }
-.logo-left  { left:  -22px; }
-.logo-right { right: -22px; }
-.corner-logo img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(0,0,0,.6)); }
+
+/* левый/правый отступы */
+.logo-left  { left:  12px; }
+.logo-right { right: 12px; }
+
+/* видимость логотипов на тёмном фоне */
+.corner-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px rgba(255,255,255,.85));
+  background: rgba(0,0,0,.28);
+  border-radius: 8px;
+  padding: 2px;
+}
 .logo-fallback { font-weight: 900; font-size: 14px; letter-spacing: .1em; }
 
 /* список внутри карточки */
