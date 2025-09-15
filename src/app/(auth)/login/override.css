@@ -85,3 +85,18 @@
   text-shadow: 0 2px 12px rgba(0,0,0,.35);
 }
 .feature-list strong { color: #fff; }
+.hero-subtitle {
+  font-size: 22px;
+}
+
+@media (min-width: 768px) {
+  .hero-subtitle {
+    font-size: 28px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .hero-subtitle {
+    font-size: 32px;
+  }
+}

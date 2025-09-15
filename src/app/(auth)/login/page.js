@@ -34,8 +34,9 @@ export default function LoginPage() {
           <div>CYBERSTARS</div>
         </h1>
 
-        <p className="hero-subtitle mx-auto mt-6 max-w-4xl text-[18px] md:text-[22px] text-white/90 drop-shadow">
-          Заходи к нам и используй свой скил, чтобы зарабатывать деньги играя в любимые игры
+        <p className="hero-subtitle mx-auto mt-6 max-w-4xl text-[22px] md:text-[28px] lg:text-[32px] text-white/90 drop-shadow">
+                 Заходи к нам и используй свой скил,
+           чтобы зарабатывать деньги играя в любимые игры
         </p>
 
         {/* Центральная жёлтая кнопка */}
@@ -44,28 +45,29 @@ export default function LoginPage() {
         </a>
       </section>
 
-      {/* Карточка «Наши игры» — ниже и с логотипами по углам */}
+      {/* Карточка «Наши игры» */}
       <section className="relative z-10 mx-auto max-w-6xl px-6 pb-24 mt-80">
         <div className="features-card lava-card allow-border mx-auto w-full max-w-[980px] p-6 md:p-8">
-          {/* Логотипы по верхним углам КАРТОЧКИ (не header) */}
-          <img
-            src="/dota-logo.png"
-            alt="Dota 2 logo"
-            className="card-logo-left"
-            width={52}
-            height={52}
-          />
-          <img
-            src="/csgo-logo.png"
-            alt="CS:GO logo"
-            className="card-logo-right"
-            width={52}
-            height={52}
-          />
-
-          <h3 className="text-center text-2xl md:text-3xl font-extrabold tracking-wide mb-6">
-            НАШИ ИГРЫ
-          </h3>
+          {/* Логотипы + заголовок в одной линии */}
+          <div className="relative flex items-center justify-between mb-6">
+            <img
+              src="/dota-logo.png"
+              alt="Dota 2 logo"
+              className="w-[52px] h-[52px] object-contain 
+                         filter drop-shadow-[0_0_6px_rgba(255,255,255,0.85)] 
+                         bg-black/30 rounded-lg p-1"
+            />
+            <h3 className="text-center text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-wide">
+              НАШИ ИГРЫ
+            </h3>
+            <img
+              src="/csgo-logo.png"
+              alt="CS:GO logo"
+              className="w-[52px] h-[52px] object-contain 
+                         filter drop-shadow-[0_0_6px_rgba(255,255,255,0.85)] 
+                         bg-black/30 rounded-lg p-1"
+            />
+          </div>
 
           <ul className="feature-list grid gap-4 text-[16px] md:text-[18px] leading-relaxed">
             <li>⚔️ Игры различных типов (1 на 1, 5 на 5)</li>
