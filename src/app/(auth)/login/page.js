@@ -4,7 +4,7 @@ import './override.css';
 export const metadata = {
   title: 'Login — CyberStars',
   description:
-    'Log in with Steam to join CyberStars Dota 2 tournaments with fair matchmaking and anti-abuse systems.',
+    'Log in with Steam to join CyberStars Dota 2 & CS:GO tournaments with fair matchmaking and anti-abuse systems.',
 };
 
 export const dynamic = 'force-dynamic';
@@ -14,61 +14,59 @@ export default function LoginPage() {
     <div
       className="login-scope relative min-h-[100vh] overflow-hidden text-white"
       style={{
-        backgroundImage: 'url("/dota-bg.png")',
+        backgroundImage: 'url("/dota-bg.png")', // твой фон
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
     >
-      {/* Steam CTA в правом верхнем углу */}
+      {/* Фирменная кнопка в правом верхнем углу (как у тебя) */}
       <SteamCTA className="fixed right-6 top-6 z-50" />
 
       {/* HERO */}
-      <section className="relative z-10 max-w-7xl px-6 pt-24">
+      <section className="relative z-10 mx-auto max-w-6xl px-6 pt-20 text-center">
         <h1
-          className="text-left font-extrabold leading-[1.05] drop-shadow-lg
-                     text-[92px] md:text-[140px] lg:text-[180px] uppercase"
+          className="hero-title mx-auto font-extrabold leading-[1.05] drop-shadow-lg
+                     text-[56px] md:text-[96px] lg:text-[120px] uppercase"
         >
-          <div>WELCOME TO</div>
+          <div className="opacity-90 tracking-[0.12em] text-[20px] md:text-[28px] lg:text-[32px] mb-2">
+            WELCOME TO
+          </div>
           <div>CYBERSTARS</div>
         </h1>
 
-        <p className="mt-8 max-w-3xl text-left text-[18px] md:text-[22px] text-white/90 drop-shadow">
-          Compete in Dota 2 tournaments; earn prizes and fun rewards
+        <p className="hero-subtitle mx-auto mt-6 max-w-4xl text-[18px] md:text-[22px] text-white/90 drop-shadow">
+          Заходи к нам и используй свой скил, чтобы зарабатывать деньги играя в любимые игры
         </p>
+
+        {/* Центральная жёлтая кнопка — как на макете */}
+        <a href="/steam-login" className="hero-cta inline-flex items-center justify-center mt-8">
+          LOGIN STEAM
+        </a>
       </section>
 
-      {/* INFO CARDS */}
-      <section className="relative z-10 max-w-7xl px-6 pb-24 space-y-6">
-        {/* Карточка: Game Modes */}
-<div className="lava-card p-6 md:p-8 mt-6 w-full max-w-[700px]">
-  <h3 className="text-4xl font-extrabold mb-4 flex items-center gap-3">
-    <span className="text-5xl">🔥</span> Game Modes
-  </h3>
-  <ul className="space-y-4 text-3xl md:text-4xl text-white font-bold">
-    <li>⚔️ 1v1 Solo Ranked Matches</li>
-    <li>🛡️ 5v5 Classic Ranked Games</li>
-    <li>⚡ 5v5 Turbo Mode</li>
-    <li>🏆 Single & Multi-Game Tournaments</li>
-  </ul>
-</div>
+      {/* Карточка «Наши игры» */}
+      <section className="relative z-10 mx-auto max-w-6xl px-6 pb-24">
+        <div className="features-card lava-card allow-border mx-auto mt-8 w-full max-w-[980px] p-6 md:p-8">
+          {/* Логотипы по углам карточки */}
+          <div className="corner-logo logo-left" aria-hidden>
+            <img src="" alt="public/dota-logo.png" onError={(e)=>{e.currentTarget.replaceWith(Object.assign(document.createElement('span'),{textContent:'DOTA',className:'logo-fallback'}));}} />
+          </div>
+          <div className="corner-logo logo-right" aria-hidden>
+            <img src="public/csgo.logo.png" alt="" onError={(e)=>{e.currentTarget.replaceWith(Object.assign(document.createElement('span'),{textContent:'CS:GO',className:'logo-fallback'}));}} />
+          </div>
 
-{/* Карточка: Fair Play System */}
-<div className="lava-card p-6 md:p-8 mt-6 w-full max-w-[700px]">
-  <h3 className="text-4xl font-extrabold mb-4 flex items-center gap-3">
-    <span className="text-5xl">🧠</span> Fair Play System
-  </h3>
-  <ul className="space-y-4 text-3xl md:text-4xl text-white font-bold">
-    <li>📊 MMR bracket-based matchmaking</li>
-    <li>🚫 Smurf & abuse prevention built-in</li>
-    <li>🕵️‍♂️ 200+ ranked games from same IP</li>
-    <li>🔒 IP/device change resets eligibility</li>
-    <li>🌐 Public Steam & Dota 2 profile required</li>
-  </ul>
-</div>
+          <h3 className="text-center text-2xl md:text-3xl font-extrabold tracking-wide mb-6">
+            НАШИ ИГРЫ
+          </h3>
 
-
-
-
+          <ul className="feature-list grid gap-4 text-[16px] md:text-[18px] leading-relaxed">
+            <li>⚔️ Игры различных типов (1 на 1, 5 на 5)</li>
+            <li>🔍 Поиск команды или игроков в твою команду</li>
+            <li>🏆 Различные турниры как с призовым фондом, так и без</li>
+            <li>📊 Подбор игроковна основе вашего MMR</li>
+            <li>🚫 Встроенная защита от смурфов и злоупотреблений</li>
+          </ul>
+        </div>
       </section>
     </div>
   );

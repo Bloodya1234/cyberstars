@@ -7,11 +7,7 @@ export default function AuthLayout({ children }) {
       <style
         dangerouslySetInnerHTML={{
           __html: `
-            header, footer, hr { display:none !important; }
-            *::before, *::after {
-              content:none !important; border:0 !important;
-              box-shadow:none !important;
-            }
+            header, footer { display:none !important; }
           `,
         }}
       />

@@ -151,3 +151,55 @@
   box-shadow: 0 0 0 1px rgba(255, 122, 51, 0.35), 0 0 24px rgba(255, 80, 20, 0.15) inset;
   mix-blend-mode: screen;
 }
+/* ===== HERO ===== */
+.hero-title { text-shadow: 0 8px 28px rgba(0,0,0,.5); }
+.hero-subtitle { text-shadow: 0 6px 20px rgba(0,0,0,.45); }
+
+/* Жёлтая кнопка как на макете */
+.hero-cta {
+  min-width: 220px;
+  padding: 12px 22px;
+  border-radius: 12px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  color: #1a1a1a !important;
+  text-decoration: none !important;
+  background: linear-gradient(180deg, #ffd465 0%, #ffb938 60%, #f9a825 100%);
+  box-shadow:
+    0 10px 28px rgba(255, 170, 30, .35),
+    0 0 0 1px rgba(255,255,255,.06) inset;
+  transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+}
+.hero-cta:hover { transform: translateY(-2px) scale(1.02); filter: brightness(1.03); }
+.hero-cta:active { transform: translateY(0) scale(.99); }
+
+/* ===== FEATURES CARD ===== */
+.features-card {
+  position: relative;
+  background: rgba(0,0,0,.55);            /* стекло */
+  border-radius: 18px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 40px rgba(0,0,0,.35);
+}
+
+/* логотипы в углах карточки */
+.corner-logo {
+  position: absolute;
+  top: -22px;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  opacity: .95;
+}
+.logo-left  { left:  -22px; }
+.logo-right { right: -22px; }
+.corner-logo img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(0,0,0,.6)); }
+.logo-fallback { font-weight: 900; font-size: 14px; letter-spacing: .1em; }
+
+/* список внутри карточки */
+.feature-list li {
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(0,0,0,.35);
+}
+.feature-list strong { color: #fff; }
